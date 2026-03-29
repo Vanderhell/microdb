@@ -94,6 +94,13 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
         return err;
     }
 
+    err = microdb_ts_init(db);
+    if (err != MICRODB_OK) {
+        free(core->heap);
+        memset(db, 0, sizeof(*db));
+        return err;
+    }
+
     core->live_bytes = microdb_kv_live_bytes(db);
     return MICRODB_OK;
 }

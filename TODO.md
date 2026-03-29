@@ -28,7 +28,10 @@ Hotove:
 Rozpracovane / dalsie kroky:
 - persistence cez WAL a storage HAL
 - testy pre KV edge cases a limity
-- implementovat TS engine
+- TS engine zacaty:
+- zakladne API `register/insert/last/query/query_buf/count/clear` je rozbehnute
+- pridane prve TS smoke testy
+- chyba este plne pokrytie spec, overflow policy detaily a kompletna test suite
 - implementovat REL schema/table/row engine
 - implementovat WAL recovery a flush do storage pages
 - doplnit porty (`posix`, `ram`, `esp32`)

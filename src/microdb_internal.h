@@ -31,6 +31,19 @@ typedef struct {
 } microdb_kv_state_t;
 
 typedef struct {
+    char name[MICRODB_TS_STREAM_NAME_LEN];
+    microdb_ts_type_t type;
+    size_t raw_size;
+    uint32_t head;
+    uint32_t tail;
+    uint32_t count;
+    uint32_t capacity;
+    microdb_ts_sample_t *buf;
+    bool registered;
+} microdb_ts_stream_t;
+
+typedef struct {
+    microdb_ts_stream_t streams[MICRODB_TS_MAX_STREAMS];
     uint32_t registered_streams;
 } microdb_ts_state_t;
 
@@ -76,6 +89,7 @@ MICRODB_STATIC_ASSERT(table_size_fits, sizeof(struct microdb_table_s) >= (MICROD
 microdb_core_t *microdb_core(microdb_t *db);
 const microdb_core_t *microdb_core_const(const microdb_t *db);
 microdb_err_t microdb_kv_init(microdb_t *db);
+microdb_err_t microdb_ts_init(microdb_t *db);
 size_t microdb_kv_live_bytes(const microdb_t *db);
 
 #endif
