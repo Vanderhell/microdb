@@ -52,6 +52,14 @@ typedef struct {
 } microdb_rel_state_t;
 
 typedef struct {
+    char name[MICRODB_REL_COL_NAME_LEN];
+    microdb_col_type_t type;
+    size_t size;
+    size_t offset;
+    bool is_index;
+} microdb_col_desc_t;
+
+typedef struct {
     uint32_t magic;
     uint8_t *heap;
     size_t heap_size;
@@ -71,15 +79,21 @@ typedef struct {
 
 typedef struct {
     char name[MICRODB_REL_TABLE_NAME_LEN];
+    microdb_col_desc_t cols[MICRODB_REL_MAX_COLS];
+    uint32_t col_count;
     uint32_t max_rows;
     uint32_t row_size;
-    uint32_t col_count;
+    uint32_t index_col;
     bool sealed;
 } microdb_schema_impl_t;
 
 struct microdb_table_s {
     char name[MICRODB_REL_TABLE_NAME_LEN];
+    microdb_col_desc_t cols[MICRODB_REL_MAX_COLS];
+    uint32_t col_count;
+    uint32_t max_rows;
     uint32_t row_size;
+    uint32_t index_col;
 };
 
 MICRODB_STATIC_ASSERT(core_size_fits, sizeof(microdb_core_t) <= sizeof(((microdb_t *)0)->_opaque));
