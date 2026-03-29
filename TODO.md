@@ -34,8 +34,12 @@ Rozpracovane / dalsie kroky:
 - overflow policy build varianty: `DROP_OLDEST`, `REJECT`, `DOWNSAMPLE`
 - downsample merge pre dve najstarsie samples
 - TS test suite rozsirena na 35/35 passing testov
-- implementovat REL schema/table/row engine
+- REL engine dokonceny pre aktualny scope:
+- schema seal/alignment, table create/get, row set/get, insert/find/find_by/delete/iter/count/clear
+- sorted index + binary search + alive bitmap
+- REL test suite rozsirena na 40/40 passing testov
 - implementovat WAL recovery a flush do storage pages
+- pripravit `port/posix/` pre WAL testy
 - doplnit porty (`posix`, `ram`, `esp32`)
 - doplnit testy a examples podla spec
 

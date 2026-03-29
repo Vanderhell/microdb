@@ -48,16 +48,40 @@ typedef struct {
 } microdb_ts_state_t;
 
 typedef struct {
-    uint32_t registered_tables;
-} microdb_rel_state_t;
-
-typedef struct {
     char name[MICRODB_REL_COL_NAME_LEN];
     microdb_col_type_t type;
     size_t size;
     size_t offset;
     bool is_index;
 } microdb_col_desc_t;
+
+typedef struct {
+    uint8_t key_bytes[MICRODB_REL_INDEX_KEY_MAX];
+    uint32_t row_idx;
+} microdb_index_entry_t;
+
+struct microdb_table_s {
+    char name[MICRODB_REL_TABLE_NAME_LEN];
+    microdb_col_desc_t cols[MICRODB_REL_MAX_COLS];
+    uint32_t col_count;
+    uint32_t max_rows;
+    size_t row_size;
+    uint32_t index_col;
+    size_t index_key_size;
+    uint8_t *rows;
+    uint8_t *alive_bitmap;
+    microdb_index_entry_t *index;
+    uint32_t *order;
+    uint32_t live_count;
+    uint32_t index_count;
+    uint32_t order_count;
+    bool registered;
+};
+
+typedef struct {
+    struct microdb_table_s tables[MICRODB_REL_MAX_TABLES];
+    uint32_t registered_tables;
+} microdb_rel_state_t;
 
 typedef struct {
     uint32_t magic;
@@ -82,23 +106,14 @@ typedef struct {
     microdb_col_desc_t cols[MICRODB_REL_MAX_COLS];
     uint32_t col_count;
     uint32_t max_rows;
-    uint32_t row_size;
+    size_t row_size;
     uint32_t index_col;
     bool sealed;
 } microdb_schema_impl_t;
 
-struct microdb_table_s {
-    char name[MICRODB_REL_TABLE_NAME_LEN];
-    microdb_col_desc_t cols[MICRODB_REL_MAX_COLS];
-    uint32_t col_count;
-    uint32_t max_rows;
-    uint32_t row_size;
-    uint32_t index_col;
-};
-
 MICRODB_STATIC_ASSERT(core_size_fits, sizeof(microdb_core_t) <= sizeof(((microdb_t *)0)->_opaque));
 MICRODB_STATIC_ASSERT(schema_size_fits, sizeof(microdb_schema_impl_t) <= sizeof(((microdb_schema_t *)0)->_opaque));
-MICRODB_STATIC_ASSERT(table_size_fits, sizeof(struct microdb_table_s) >= (MICRODB_REL_TABLE_NAME_LEN + sizeof(uint32_t)));
+MICRODB_STATIC_ASSERT(table_size_fits, sizeof(struct microdb_table_s) >= (MICRODB_REL_TABLE_NAME_LEN + sizeof(size_t)));
 
 microdb_core_t *microdb_core(microdb_t *db);
 const microdb_core_t *microdb_core_const(const microdb_t *db);
