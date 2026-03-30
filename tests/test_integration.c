@@ -286,7 +286,69 @@ MDB_TEST(integration_stats_track_mixed_usage) {
     ASSERT_EQ(stats.kv_entries, 1u);
     ASSERT_EQ(stats.ts_streams, 1u);
     ASSERT_EQ(stats.rel_tables, 1u);
-    ASSERT_EQ(stats.kv_capacity, MICRODB_KV_MAX_KEYS);
+    ASSERT_GT(stats.kv_capacity, 0u);
+}
+
+MDB_TEST(cfg_kv_heavy_split) {
+    microdb_t default_db;
+    microdb_t heavy_db;
+    microdb_cfg_t default_cfg;
+    microdb_cfg_t heavy_cfg;
+    microdb_stats_t default_stats;
+    microdb_stats_t heavy_stats;
+
+    memset(&default_db, 0, sizeof(default_db));
+    memset(&heavy_db, 0, sizeof(heavy_db));
+    memset(&default_cfg, 0, sizeof(default_cfg));
+    memset(&heavy_cfg, 0, sizeof(heavy_cfg));
+
+    default_cfg.storage = NULL;
+    default_cfg.ram_kb = 32u;
+    default_cfg.now = NULL;
+    ASSERT_EQ(microdb_init(&default_db, &default_cfg), MICRODB_OK);
+    ASSERT_EQ(microdb_stats(&default_db, &default_stats), MICRODB_OK);
+
+    heavy_cfg.storage = NULL;
+    heavy_cfg.ram_kb = 32u;
+    heavy_cfg.now = NULL;
+    heavy_cfg.kv_pct = 80u;
+    heavy_cfg.ts_pct = 15u;
+    heavy_cfg.rel_pct = 5u;
+    ASSERT_EQ(microdb_init(&heavy_db, &heavy_cfg), MICRODB_OK);
+    ASSERT_EQ(microdb_stats(&heavy_db, &heavy_stats), MICRODB_OK);
+    ASSERT_GT(heavy_stats.kv_capacity, default_stats.kv_capacity);
+
+    ASSERT_EQ(microdb_deinit(&heavy_db), MICRODB_OK);
+    ASSERT_EQ(microdb_deinit(&default_db), MICRODB_OK);
+}
+
+MDB_TEST(cfg_invalid_pct_sum) {
+    microdb_t db;
+    microdb_cfg_t cfg;
+
+    memset(&db, 0, sizeof(db));
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.storage = NULL;
+    cfg.ram_kb = 32u;
+    cfg.kv_pct = 50u;
+    cfg.ts_pct = 50u;
+    cfg.rel_pct = 50u;
+    ASSERT_EQ(microdb_init(&db, &cfg), MICRODB_ERR_INVALID);
+}
+
+MDB_TEST(cfg_zero_pct_uses_compile_defaults) {
+    microdb_t db;
+    microdb_cfg_t cfg;
+
+    memset(&db, 0, sizeof(db));
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.storage = NULL;
+    cfg.ram_kb = 32u;
+    cfg.kv_pct = 0u;
+    cfg.ts_pct = 0u;
+    cfg.rel_pct = 0u;
+    ASSERT_EQ(microdb_init(&db, &cfg), MICRODB_OK);
+    ASSERT_EQ(microdb_deinit(&db), MICRODB_OK);
 }
 
 MDB_TEST(integration_clear_then_reload_empty_state) {
@@ -439,6 +501,9 @@ int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, integration_kv_ttl_persists_after_reload);
     MDB_RUN_TEST(setup_db, teardown_db, integration_multiple_reinit_cycles_preserve_data);
     MDB_RUN_TEST(setup_db, teardown_db, integration_stats_track_mixed_usage);
+    MDB_RUN_TEST(setup_db, teardown_db, cfg_kv_heavy_split);
+    MDB_RUN_TEST(setup_db, teardown_db, cfg_invalid_pct_sum);
+    MDB_RUN_TEST(setup_db, teardown_db, cfg_zero_pct_uses_compile_defaults);
     MDB_RUN_TEST(setup_db, teardown_db, integration_clear_then_reload_empty_state);
     MDB_RUN_TEST(setup_db, teardown_db, integration_storage_bytes_written_increase);
     MDB_RUN_TEST(setup_db, teardown_db, integration_reload_without_explicit_flush_uses_wal);

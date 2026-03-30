@@ -46,6 +46,10 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
     microdb_core_t *core;
     uint8_t *cursor;
     uint32_t ram_kb;
+    uint8_t kv_pct;
+    uint8_t ts_pct;
+    uint8_t rel_pct;
+    bool custom_split;
     size_t total_bytes;
     size_t kv_bytes;
     size_t ts_bytes;
@@ -60,6 +64,22 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
     core = microdb_core(db);
 
     ram_kb = cfg->ram_kb != 0u ? cfg->ram_kb : MICRODB_RAM_KB;
+    custom_split = (cfg->kv_pct != 0u) || (cfg->ts_pct != 0u) || (cfg->rel_pct != 0u);
+    if (custom_split) {
+        if (cfg->kv_pct == 0u || cfg->ts_pct == 0u || cfg->rel_pct == 0u) {
+            return MICRODB_ERR_INVALID;
+        }
+        kv_pct = cfg->kv_pct;
+        ts_pct = cfg->ts_pct;
+        rel_pct = cfg->rel_pct;
+    } else {
+        kv_pct = (uint8_t)MICRODB_RAM_KV_PCT;
+        ts_pct = (uint8_t)MICRODB_RAM_TS_PCT;
+        rel_pct = (uint8_t)MICRODB_RAM_REL_PCT;
+    }
+    if ((uint32_t)kv_pct + (uint32_t)ts_pct + (uint32_t)rel_pct != 100u) {
+        return MICRODB_ERR_INVALID;
+    }
     total_bytes = microdb_bytes_from_kb(ram_kb);
 
     core->heap = (uint8_t *)malloc(total_bytes);
@@ -79,8 +99,8 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
     core->wal_enabled = (cfg->storage != NULL) && (MICRODB_ENABLE_WAL != 0);
     microdb_arena_init(&core->arena, core->heap, total_bytes);
 
-    kv_bytes = microdb_slice_bytes(total_bytes, MICRODB_RAM_KV_PCT);
-    ts_bytes = microdb_slice_bytes(total_bytes, MICRODB_RAM_TS_PCT);
+    kv_bytes = microdb_slice_bytes(total_bytes, kv_pct);
+    ts_bytes = microdb_slice_bytes(total_bytes, ts_pct);
     rel_bytes = total_bytes - kv_bytes - ts_bytes;
 
     cursor = core->heap;
@@ -166,7 +186,7 @@ microdb_err_t microdb_stats(const microdb_t *db, microdb_stats_t *out) {
     out->ram_total_bytes = core->heap_size;
     out->ram_used_bytes = core->live_bytes;
     out->kv_entries = core->kv.entry_count;
-    out->kv_capacity = MICRODB_KV_MAX_KEYS;
+    out->kv_capacity = (uint32_t)(core->kv_arena.capacity / sizeof(microdb_kv_bucket_t));
     out->ts_streams = core->ts.registered_streams;
     out->rel_tables = core->rel.registered_tables;
     out->storage_bytes_written = core->storage_bytes_written;

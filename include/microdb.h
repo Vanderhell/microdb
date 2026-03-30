@@ -175,6 +175,9 @@ typedef struct {
     microdb_storage_t *storage;
     uint32_t ram_kb;
     microdb_timestamp_t (*now)(void);
+    uint8_t kv_pct;
+    uint8_t ts_pct;
+    uint8_t rel_pct;
 } microdb_cfg_t;
 
 typedef struct {
