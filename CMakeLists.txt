@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(microdb C)
+project(microdb VERSION 0.1.0 LANGUAGES C)
+
+include(GNUInstallDirs)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -17,7 +19,18 @@ add_library(microdb
     port/posix/microdb_port_posix.c
 )
 
-target_include_directories(microdb PUBLIC include port/ram port/posix PRIVATE src)
+target_include_directories(
+    microdb
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/port/ram>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/port/posix>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/microdb/port>
+    PRIVATE
+        src
+)
+set_target_properties(microdb PROPERTIES PUBLIC_HEADER include/microdb.h)
 
 add_library(microdb_reject STATIC
     src/microdb.c
@@ -246,6 +259,36 @@ else()
     target_compile_options(microdb_ts_only PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(microdb_rel_only PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+install(
+    TARGETS microdb
+    EXPORT microdbTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(
+    FILES
+        port/ram/microdb_port_ram.h
+        port/posix/microdb_port_posix.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/microdb/port
+)
+
+install(
+    FILES
+        README.md
+        LICENSE
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/microdb
+)
+
+install(
+    EXPORT microdbTargets
+    FILE microdbTargets.cmake
+    NAMESPACE microdb::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/microdb
+)
 
 if(MICRODB_BUILD_TESTS)
     enable_testing()

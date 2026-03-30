@@ -16,7 +16,8 @@
 
 static microdb_t g_db;
 static microdb_storage_t g_storage;
-static const char *g_path = MICRODB_TEST_DB_PATH;
+static char g_path[128];
+static unsigned g_path_seq = 0u;
 static uint32_t g_now = 1000u;
 
 typedef struct {
@@ -60,6 +61,8 @@ static void open_ram_db(microdb_t *db, uint32_t ram_kb) {
 
 static void setup_db(void) {
     g_now = 1000u;
+    g_path_seq++;
+    (void)snprintf(g_path, sizeof(g_path), "%s.%u", MICRODB_TEST_DB_PATH, g_path_seq);
     microdb_port_posix_remove(g_path);
     open_storage_db(&g_db, &g_storage, MICRODB_RAM_KB);
 }

@@ -191,6 +191,11 @@ microdb is intended to sit alongside the rest of the micro-toolkit stack:
 - `microcrypt` for encryption and authentication
 - transport or protocol layers above the database as needed by the application
 
+## Wiki
+
+GitHub Wiki source pages are stored in [`wiki/`](wiki).
+That keeps documentation versioned in the main repository and ready to publish into the GitHub wiki repo.
+
 ## License
 
 MIT.
