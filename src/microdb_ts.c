@@ -57,6 +57,15 @@ static void microdb_ts_set_value(microdb_ts_stream_t *stream, microdb_ts_sample_
 }
 
 static void microdb_ts_rb_insert(microdb_ts_stream_t *stream, const microdb_ts_sample_t *sample) {
+    if (stream->count == stream->capacity) {
+#if MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_DROP_OLDEST
+        MICRODB_LOG("WARN",
+                    "TS stream '%s' full: dropping oldest sample ts=%u",
+                    stream->name,
+                    (unsigned)stream->buf[stream->tail].ts);
+#endif
+    }
+
     stream->buf[stream->head] = *sample;
     stream->head = (stream->head + 1u) % stream->capacity;
 
@@ -74,6 +83,10 @@ static void microdb_ts_downsample_oldest(microdb_ts_stream_t *stream) {
     uint32_t next;
     microdb_ts_sample_t *a = &stream->buf[i0];
     microdb_ts_sample_t *b = &stream->buf[i1];
+
+    MICRODB_LOG("INFO",
+                "TS stream '%s' downsampling oldest two samples",
+                stream->name);
 
     a->ts = (a->ts / 2u) + (b->ts / 2u);
 
@@ -199,6 +212,9 @@ microdb_err_t microdb_ts_insert(microdb_t *db, const char *name, microdb_timesta
 
 #if MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_REJECT
     if (stream->count == stream->capacity) {
+        MICRODB_LOG("WARN",
+                    "TS stream '%s' full: rejecting new sample (REJECT policy)",
+                    stream->name);
         return MICRODB_ERR_FULL;
     }
 #elif MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_DOWNSAMPLE

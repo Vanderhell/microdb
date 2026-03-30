@@ -77,6 +77,22 @@
 #define MICRODB_TIMESTAMP_TYPE uint32_t
 #endif
 
+/* Debug logging
+ * Define MICRODB_LOG before #include "microdb.h" to enable internal logging.
+ * Default is a no-op with zero production overhead.
+ *
+ * Example (printf):
+ *   #define MICRODB_LOG(level, fmt, ...) \
+ *       printf("[microdb][%s] " fmt "\n", level, ##__VA_ARGS__)
+ *
+ * Example (ESP-IDF):
+ *   #define MICRODB_LOG(level, fmt, ...) \
+ *       ESP_LOGI("microdb", "[%s] " fmt, level, ##__VA_ARGS__)
+ */
+#ifndef MICRODB_LOG
+#define MICRODB_LOG(level, fmt, ...) ((void)0)
+#endif
+
 #define MICRODB_STATIC_ASSERT(name, expr) typedef char microdb_static_assert_##name[(expr) ? 1 : -1]
 
 MICRODB_STATIC_ASSERT(ram_pct_sum, (MICRODB_RAM_KV_PCT + MICRODB_RAM_TS_PCT + MICRODB_RAM_REL_PCT) == 100u);

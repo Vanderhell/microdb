@@ -880,6 +880,7 @@ static microdb_err_t microdb_replay_wal(microdb_t *db, bool *out_had_entries, bo
     uint32_t block_seq;
     uint32_t offset = core->layout.wal_offset + 32u;
     uint32_t i;
+    uint32_t replayed_count = 0u;
     microdb_err_t err;
 
     *out_had_entries = false;
@@ -891,12 +892,14 @@ static microdb_err_t microdb_replay_wal(microdb_t *db, bool *out_had_entries, bo
     }
 
     if (microdb_get_u32(header + 0u) != MICRODB_WAL_MAGIC) {
+        MICRODB_LOG("ERROR", "WAL header corrupt: resetting WAL");
         *out_header_reset = true;
         return MICRODB_OK;
     }
 
     stored_crc = microdb_get_u32(header + 16u);
     if (MICRODB_CRC32(header, 16u) != stored_crc) {
+        MICRODB_LOG("ERROR", "WAL header corrupt: resetting WAL");
         *out_header_reset = true;
         return MICRODB_OK;
     }
@@ -940,6 +943,9 @@ static microdb_err_t microdb_replay_wal(microdb_t *db, bool *out_had_entries, bo
         crc = MICRODB_CRC32(entry_header, 12u);
         crc = microdb_crc32(crc, payload, data_len);
         if (crc != entry_crc) {
+            MICRODB_LOG("ERROR",
+                        "WAL corrupt entry at seq=%u: CRC mismatch, stopping replay",
+                        (unsigned)microdb_get_u32(entry_header + 4u));
             break;
         }
 
@@ -950,9 +956,13 @@ static microdb_err_t microdb_replay_wal(microdb_t *db, bool *out_had_entries, bo
         }
 
         offset += 16u + aligned_len;
+        replayed_count++;
     }
     core->wal_replaying = false;
     core->wal_used = offset - core->layout.wal_offset;
+    MICRODB_LOG("INFO",
+                "WAL recovery complete: replayed %u entries",
+                (unsigned)replayed_count);
     return MICRODB_OK;
 }
 
@@ -1085,6 +1095,12 @@ microdb_err_t microdb_storage_flush(microdb_t *db) {
 
     if (!microdb_storage_ready(core) || core->storage_loading || core->wal_replaying) {
         return MICRODB_OK;
+    }
+
+    if (core->wal_enabled) {
+        MICRODB_LOG("INFO",
+                    "WAL compaction triggered: entry_count=%u",
+                    (unsigned)core->wal_entry_count);
     }
 
     err = microdb_write_kv_page(core);

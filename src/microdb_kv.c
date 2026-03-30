@@ -93,6 +93,12 @@ static void microdb_kv_compact(microdb_core_t *core) {
     uint8_t *dst = core->kv.value_store;
     uint32_t i;
 
+    MICRODB_LOG("INFO",
+                "KV val_pool compaction: used=%u/%u live=%u",
+                (unsigned)core->kv.value_used,
+                (unsigned)core->kv.value_capacity,
+                (unsigned)core->kv.entry_count);
+
     for (i = 0; i < core->kv.bucket_count; ++i) {
         microdb_kv_bucket_t *bucket = &core->kv.buckets[i];
         if (bucket->state != MICRODB_KV_BUCKET_LIVE) {
@@ -268,6 +274,10 @@ static microdb_err_t microdb_kv_evict_lru(microdb_core_t *core) {
         return MICRODB_ERR_FULL;
     }
 
+    MICRODB_LOG("WARN",
+                "KV LRU eviction: key=%s last_access=%u",
+                core->kv.buckets[best_idx].key,
+                (unsigned)core->kv.buckets[best_idx].last_access);
     microdb_kv_remove_slot(core, best_idx);
     microdb_kv_maybe_compact(core);
     return MICRODB_OK;

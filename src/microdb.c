@@ -64,6 +64,9 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
 
     core->heap = (uint8_t *)malloc(total_bytes);
     if (core->heap == NULL) {
+        MICRODB_LOG("ERROR",
+                    "malloc(%u) failed for RAM budget",
+                    (unsigned)(ram_kb * 1024u));
         memset(db, 0, sizeof(*db));
         return MICRODB_ERR_NO_MEM;
     }
@@ -103,6 +106,12 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
 
     err = microdb_storage_bootstrap(db);
     if (err != MICRODB_OK) {
+        if (err == MICRODB_ERR_STORAGE && cfg->storage != NULL) {
+            MICRODB_LOG("ERROR",
+                        "Storage capacity %u too small, need %u bytes",
+                        (unsigned)cfg->storage->capacity,
+                        (unsigned)core->layout.total_size);
+        }
         free(core->heap);
         memset(db, 0, sizeof(*db));
         return err;
