@@ -12,6 +12,7 @@ static const char *g_path = "wal_kv128.bin";
 static void setup_db(void) {
     microdb_cfg_t cfg;
 
+    memset(&cfg, 0, sizeof(cfg));
     microdb_port_posix_remove(g_path);
     ASSERT_EQ(microdb_port_posix_init(&g_storage, g_path, 131072u), MICRODB_OK);
     cfg.storage = &g_storage;
@@ -47,7 +48,11 @@ MDB_TEST(wal_stress_100_kv_set_flush_reinit_survive) {
     microdb_port_posix_deinit(&g_storage);
     ASSERT_EQ(microdb_port_posix_init(&g_storage, g_path, 131072u), MICRODB_OK);
     {
-        microdb_cfg_t cfg = { &g_storage, 64u, NULL };
+        microdb_cfg_t cfg;
+        memset(&cfg, 0, sizeof(cfg));
+        cfg.storage = &g_storage;
+        cfg.ram_kb = 64u;
+        cfg.now = NULL;
         ASSERT_EQ(microdb_init(&g_db, &cfg), MICRODB_OK);
     }
 

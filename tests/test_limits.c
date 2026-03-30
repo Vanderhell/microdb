@@ -6,6 +6,15 @@
 #ifndef MICRODB_TEST_WITH_8KB
 #define MICRODB_TEST_WITH_8KB 0
 #endif
+#ifndef MICRODB_TEST_LIMITS_KV_ONLY
+#define MICRODB_TEST_LIMITS_KV_ONLY 0
+#endif
+#ifndef MICRODB_TEST_LIMITS_TS_ONLY
+#define MICRODB_TEST_LIMITS_TS_ONLY 0
+#endif
+#ifndef MICRODB_TEST_LIMITS_REL_ONLY
+#define MICRODB_TEST_LIMITS_REL_ONLY 0
+#endif
 
 static microdb_t g_db;
 
@@ -288,6 +297,26 @@ MDB_TEST(limits_stats_capacity_matches_macro) {
 }
 
 int main(void) {
+#if MICRODB_TEST_LIMITS_KV_ONLY
+    MDB_RUN_TEST(setup_db, teardown_db, limits_kv_key_max_minus_one_accepted);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_kv_key_max_rejected);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_kv_value_max_accepted);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_kv_value_max_plus_one_rejected);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_stats_capacity_matches_macro);
+#elif MICRODB_TEST_LIMITS_TS_ONLY
+    MDB_RUN_TEST(setup_db, teardown_db, limits_ts_raw_max_accepted);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_ts_raw_zero_rejected);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_ts_raw_too_large_rejected);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_ts_name_max_minus_one_accepted);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_ts_name_max_rejected);
+#elif MICRODB_TEST_LIMITS_REL_ONLY
+    MDB_RUN_TEST(setup_db, teardown_db, limits_rel_table_name_max_minus_one_accepted);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_rel_table_name_max_rejected);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_rel_column_name_max_minus_one_accepted);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_rel_column_name_max_rejected);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_rel_max_tables_enforced);
+    MDB_RUN_TEST(setup_db, teardown_db, limits_rel_max_cols_enforced);
+#else
 #if MICRODB_TEST_WITH_8KB
     MDB_RUN_TEST(setup_db, teardown_db, limits_ram_8kb_functional);
 #endif
@@ -312,5 +341,6 @@ int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, limits_rel_max_tables_enforced);
     MDB_RUN_TEST(setup_db, teardown_db, limits_rel_max_cols_enforced);
     MDB_RUN_TEST(setup_db, teardown_db, limits_stats_capacity_matches_macro);
+#endif
     return MDB_RESULT();
 }
