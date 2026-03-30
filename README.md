@@ -3,10 +3,11 @@
 > Embedded database for microcontrollers.
 > Three engines. One malloc. Zero dependencies.
 
-![Language: C99](https://img.shields.io/badge/language-C99-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-orange)
-![Tests: 175+](https://img.shields.io/badge/tests-175%2B-brightgreen)
+[![CI](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml)
+[![Language: C99](https://img.shields.io/badge/language-C99-blue)](https://en.wikipedia.org/wiki/C99)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-orange)](https://github.com/Vanderhell/microdb)
+[![Tests: 175+](https://img.shields.io/badge/tests-175%2B-brightgreen)](https://github.com/Vanderhell/microdb)
 
 ## What is microdb?
 
