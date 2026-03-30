@@ -23,10 +23,17 @@ Highlights:
 
 ## Files to attach
 
-- `microdb-<version>-windows-x64.zip`
-- `microdb-<version>-windows-x64.zip.sha256`
-- `microdb-<version>-linux-x64.tar.gz`
-- `microdb-<version>-linux-x64.tar.gz.sha256`
+- Windows archive: `microdb-<version>-windows-x64.zip`
+- Windows checksum: `microdb-<version>-windows-x64.zip.sha256`
+- Linux archive: `microdb-<version>-linux-x64.tar.gz`
+- Linux checksum: `microdb-<version>-linux-x64.tar.gz.sha256`
+
+## Upload pairs
+
+Upload both files for each platform:
+
+- `microdb-<version>-windows-x64.zip` + `microdb-<version>-windows-x64.zip.sha256`
+- `microdb-<version>-linux-x64.tar.gz` + `microdb-<version>-linux-x64.tar.gz.sha256`
 
 ## Topics to set on the repository
 
