@@ -78,6 +78,7 @@ It scans baseline JSON files and computes recommended budgets using:
 - percentile (default `p95`)
 - margin percentage (default `20%`)
 - minimum absolute headroom (default `50 ms`)
+- minimum samples per OS group (default `1`, configurable via `-MinSamplesPerOs`)
 
 Example:
 
@@ -87,6 +88,7 @@ pwsh ./scripts/recommend-managed-baselines.ps1 `
   -Quantile 0.95 `
   -MarginPct 20 `
   -MinHeadroomMs 50 `
+  -MinSamplesPerOs 4 `
   -OutputJson ./managed-baseline-recommendations.json `
   -OutputMarkdown ./managed-baseline-recommendations.md
 ```
@@ -103,6 +105,11 @@ It reads recommendation JSON and updates matching presets in `CMakePresets.json`
 - `ci-debug-windows`
 - `release-linux`
 - `release-windows`
+
+Safety defaults:
+
+- requires complete preset/recommendation mapping (`-RequireCompleteMapping`, enabled by default)
+- enforces budget bounds (`-MinBudgetMs` / `-MaxBudgetMs`, default `1..600000`)
 
 Dry-run preview:
 

@@ -3,6 +3,7 @@ param(
     [double]$Quantile = 0.95,
     [double]$MarginPct = 20.0,
     [double]$MinHeadroomMs = 50.0,
+    [int]$MinSamplesPerOs = 1,
     [string]$OutputJson = "",
     [string]$OutputMarkdown = ""
 )
@@ -18,6 +19,14 @@ if ($MarginPct -lt 0.0) {
 }
 if ($MinHeadroomMs -lt 0.0) {
     throw "MinHeadroomMs must be >= 0."
+}
+if ($MinSamplesPerOs -lt 1) {
+    throw "MinSamplesPerOs must be >= 1."
+}
+
+function Test-IsFiniteNumber {
+    param([double]$Value)
+    return (-not [double]::IsNaN($Value)) -and (-not [double]::IsInfinity($Value))
 }
 
 function Get-PercentileValue {
@@ -46,14 +55,36 @@ if ($files.Count -eq 0) {
 $rows = @()
 foreach ($f in $files) {
     $obj = Get-Content $f.FullName -Raw | ConvertFrom-Json
+    $os = [string]$obj.os
+    $preset = [string]$obj.preset
+    $smokeRuntime = [double]$obj.smoke_runtime_ms
+    $longRuntime = [double]$obj.long_runtime_ms
+    $smokeBudget = [double]$obj.smoke_budget_ms
+    $longBudget = [double]$obj.long_budget_ms
+
+    if ([string]::IsNullOrWhiteSpace($os)) {
+        throw "Invalid baseline file '$($f.FullName)': missing or empty 'os'."
+    }
+    if ([string]::IsNullOrWhiteSpace($preset)) {
+        throw "Invalid baseline file '$($f.FullName)': missing or empty 'preset'."
+    }
+    if (
+        -not (Test-IsFiniteNumber $smokeRuntime) -or $smokeRuntime -lt 0.0 -or
+        -not (Test-IsFiniteNumber $longRuntime) -or $longRuntime -lt 0.0 -or
+        -not (Test-IsFiniteNumber $smokeBudget) -or $smokeBudget -lt 1.0 -or
+        -not (Test-IsFiniteNumber $longBudget) -or $longBudget -lt 1.0
+    ) {
+        throw "Invalid baseline file '$($f.FullName)': runtime/budget fields are missing or out of range."
+    }
+
     $rows += [PSCustomObject]@{
-        os = [string]$obj.os
-        preset = [string]$obj.preset
+        os = $os
+        preset = $preset
         date_utc = [string]$obj.date_utc
-        smoke_runtime_ms = [double]$obj.smoke_runtime_ms
-        long_runtime_ms = [double]$obj.long_runtime_ms
-        smoke_budget_ms = [double]$obj.smoke_budget_ms
-        long_budget_ms = [double]$obj.long_budget_ms
+        smoke_runtime_ms = $smokeRuntime
+        long_runtime_ms = $longRuntime
+        smoke_budget_ms = $smokeBudget
+        long_budget_ms = $longBudget
         file = [string]$f.FullName
     }
 }
@@ -74,6 +105,9 @@ $mdLines += "|---|---:|---:|---:|---:|---:|---:|"
 
 foreach ($g in $groups) {
     $os = [string]$g.Name
+    if ($g.Count -lt $MinSamplesPerOs) {
+        throw "OS '$os' has only $($g.Count) samples, below MinSamplesPerOs=$MinSamplesPerOs."
+    }
 
     $smokeVals = @($g.Group | ForEach-Object { [double]$_.smoke_runtime_ms } | Sort-Object)
     $longVals = @($g.Group | ForEach-Object { [double]$_.long_runtime_ms } | Sort-Object)

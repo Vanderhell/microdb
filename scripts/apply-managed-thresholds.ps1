@@ -1,6 +1,9 @@
 param(
     [string]$RecommendationsJson,
     [string]$PresetsPath = "CMakePresets.json",
+    [switch]$RequireCompleteMapping = $true,
+    [int]$MinBudgetMs = 1,
+    [int]$MaxBudgetMs = 600000,
     [switch]$DryRun
 )
 
@@ -16,6 +19,12 @@ if (-not (Test-Path $RecommendationsJson)) {
 if (-not (Test-Path $PresetsPath)) {
     throw "Presets file not found: $PresetsPath"
 }
+if ($MinBudgetMs -lt 1) {
+    throw "MinBudgetMs must be >= 1."
+}
+if ($MaxBudgetMs -lt $MinBudgetMs) {
+    throw "MaxBudgetMs must be >= MinBudgetMs."
+}
 
 $rec = Get-Content $RecommendationsJson -Raw | ConvertFrom-Json
 $presets = Get-Content $PresetsPath -Raw | ConvertFrom-Json
@@ -27,16 +36,46 @@ if ($null -eq $rec.recommendations -or $rec.recommendations.Count -eq 0) {
     throw "Invalid recommendations file: missing recommendations entries."
 }
 
+function Get-RecommendationKey {
+    param(
+        [string]$OsName,
+        [string]$Lane
+    )
+    return ("{0}|{1}" -f $OsName.Trim().ToLowerInvariant(), $Lane.Trim().ToLowerInvariant())
+}
+
+$recMap = @{}
+foreach ($entry in $rec.recommendations) {
+    $osName = [string]$entry.os
+    $lane = [string]$entry.lane
+    if ([string]::IsNullOrWhiteSpace($osName) -or [string]::IsNullOrWhiteSpace($lane)) {
+        throw "Invalid recommendations entry: each item must define non-empty 'os' and 'lane'."
+    }
+    $key = Get-RecommendationKey -OsName $osName -Lane $lane
+    if ($recMap.ContainsKey($key)) {
+        throw "Duplicate recommendation entry for os='$osName', lane='$lane'."
+    }
+    $recMap[$key] = $entry
+}
+
 function Get-RecBudget {
     param(
         [string]$OsName,
         [string]$Lane
     )
-    $entry = $rec.recommendations | Where-Object { $_.os -eq $OsName -and $_.lane -eq $Lane } | Select-Object -First 1
+    $key = Get-RecommendationKey -OsName $OsName -Lane $Lane
+    if (-not $recMap.ContainsKey($key)) {
+        return $null
+    }
+    $entry = $recMap[$key]
     if ($null -eq $entry) {
         return $null
     }
-    return [int][math]::Ceiling([double]$entry.recommended_budget_ms)
+    $budget = [int][math]::Ceiling([double]$entry.recommended_budget_ms)
+    if ($budget -lt $MinBudgetMs -or $budget -gt $MaxBudgetMs) {
+        throw "Recommended budget out of range for os='$OsName' lane='$Lane': $budget (allowed $MinBudgetMs..$MaxBudgetMs)."
+    }
+    return $budget
 }
 
 $map = @(
@@ -51,6 +90,9 @@ $changes = @()
 foreach ($m in $map) {
     $preset = $presets.configurePresets | Where-Object { $_.name -eq $m.preset } | Select-Object -First 1
     if ($null -eq $preset) {
+        if ($RequireCompleteMapping) {
+            throw "Preset '$($m.preset)' not found in $PresetsPath."
+        }
         continue
     }
     if ($null -eq $preset.cacheVariables) {
@@ -60,6 +102,9 @@ foreach ($m in $map) {
     $smokeRec = Get-RecBudget -OsName $m.os -Lane "smoke"
     $longRec = Get-RecBudget -OsName $m.os -Lane "long"
     if ($null -eq $smokeRec -or $null -eq $longRec) {
+        if ($RequireCompleteMapping) {
+            throw "Missing recommendation mapping for os='$($m.os)' lanes smoke/long."
+        }
         continue
     }
 
