@@ -312,6 +312,15 @@ if(MICRODB_BUILD_OPTIONAL_BACKENDS)
     add_library(microdb_backend_compat STATIC src/backends/microdb_backend_compat.c)
     target_include_directories(microdb_backend_compat PUBLIC include PRIVATE src)
 
+    add_library(microdb_backend_decision STATIC src/backends/microdb_backend_decision.c)
+    target_include_directories(microdb_backend_decision PUBLIC include PRIVATE src)
+    target_link_libraries(
+        microdb_backend_decision
+        PUBLIC
+            microdb_backend_registry
+            microdb_backend_compat
+    )
+
     add_library(microdb_backend_nand_stub STATIC src/backends/microdb_backend_nand_stub.c)
     target_include_directories(microdb_backend_nand_stub PUBLIC include PRIVATE src)
     target_link_libraries(microdb_backend_nand_stub PUBLIC microdb_backend_registry)
@@ -329,6 +338,7 @@ if(MICRODB_BUILD_OPTIONAL_BACKENDS)
         DEPENDS
             microdb_backend_registry
             microdb_backend_compat
+            microdb_backend_decision
             microdb_backend_nand_stub
             microdb_backend_emmc_stub
             microdb_backend_sd_stub
@@ -375,6 +385,7 @@ if(MSVC)
     if(TARGET microdb_backend_nand_stub)
         target_compile_options(microdb_backend_registry PRIVATE /W4)
         target_compile_options(microdb_backend_compat PRIVATE /W4)
+        target_compile_options(microdb_backend_decision PRIVATE /W4)
         target_compile_options(microdb_backend_nand_stub PRIVATE /W4)
         target_compile_options(microdb_backend_emmc_stub PRIVATE /W4)
         target_compile_options(microdb_backend_sd_stub PRIVATE /W4)
@@ -403,6 +414,7 @@ else()
     if(TARGET microdb_backend_nand_stub)
         target_compile_options(microdb_backend_registry PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(microdb_backend_compat PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(microdb_backend_decision PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(microdb_backend_nand_stub PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(microdb_backend_emmc_stub PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(microdb_backend_sd_stub PRIVATE -Wall -Wextra -Wpedantic)
@@ -430,6 +442,7 @@ install(
         include/microdb_capacity_profile.h
         include/microdb_backend_adapter.h
         include/microdb_backend_compat.h
+        include/microdb_backend_decision.h
         include/microdb_cpp_storage_profile.hpp
         include/microdb_cpp.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
@@ -823,6 +836,16 @@ if(MICRODB_BUILD_TESTS)
         target_include_directories(test_backend_compat PRIVATE include tests src)
         target_link_libraries(test_backend_compat PRIVATE microdb_backend_compat)
         add_test(NAME test_backend_compat COMMAND test_backend_compat)
+
+        add_executable(test_backend_decision tests/test_backend_decision.c)
+        target_include_directories(test_backend_decision PRIVATE include tests src)
+        target_link_libraries(
+            test_backend_decision
+            PRIVATE
+                microdb_backend_decision
+                microdb_backend_nand_stub
+        )
+        add_test(NAME test_backend_decision COMMAND test_backend_decision)
 
         add_executable(test_backend_registry tests/test_backend_registry.c)
         target_include_directories(test_backend_registry PRIVATE include tests src)

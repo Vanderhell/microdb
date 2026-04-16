@@ -23,10 +23,14 @@
 10. Package adapters modularly so linker pulls only used backends.
 
 ### Progress Snapshot
-- ✅ `8) Capacity Profiles`: done (`2/4/8/16/32 MiB`, C + C++ profile mapping, profile tests).
-- ✅ `9) HTML Capacity Estimator`: done (`tools/microdb_capacity_estimator.html`).
-- ✅ C++ wrapper baseline: done in staged commits (lifecycle/stats + KV + TS + REL + txn + typed helpers).
-- 🔜 Next focus: `10) Modular Backend Packaging + Linker-Friendliness`.
+- [done] 8) Capacity Profiles: done (2/4/8/16/32 MiB, C + C++ profile mapping, profile tests).
+- [done] 9) HTML Capacity Estimator: done (	ools/microdb_capacity_estimator.html).
+- [done] C++ wrapper baseline: done in staged commits (lifecycle/stats + KV + TS + REL + txn + typed helpers).
+- [in_progress] 10) Modular Backend Packaging + Linker-Friendliness.
+- [done] 10.1 optional backend targets + strip-link gate.
+- [done] 1) capability descriptor module (microdb_backend_adapter.h) in optional adapter layer.
+- [done] 3) open-time compatibility classifier module (direct/via_adapter/unsupported) in optional adapter layer.
+- [next] Add integration decision flow usage and start ALIGNED adapter implementation.
 
 ### 1) Storage Capability Descriptor
 - Add capability fields to storage HAL:

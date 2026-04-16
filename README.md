@@ -177,6 +177,11 @@ Persistent layout starts with a WAL region and then separate KV, TS, and REL reg
 
 Core storage positioning: microdb core today natively supports byte-write durable backends; aligned/block/NAND media require a translation layer.
 
+Optional backend adapter modules (modular, not linked into core by default):
+- `microdb_backend_registry` (adapter registration layer)
+- `microdb_backend_compat` (open-time `direct` / `via_adapter` / `unsupported` classification)
+- stub modules for managed media (`nand/emmc/sd`) used for integration/testing flow
+
 Storage contract (fail-fast at `microdb_init`):
 - `erase_size` must be `> 0`
 - `write_size` must be exactly `1`
