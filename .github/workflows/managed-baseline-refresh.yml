@@ -67,7 +67,7 @@ jobs:
           {
             "os": "${{ matrix.label }}",
             "preset": "${{ matrix.test_preset }}",
-            "date_utc": "$(Get-Date -AsUTC -Format "yyyy-MM-ddTHH:mm:ssZ")",
+            "date_utc": "$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))",
             "smoke_runtime_ms": $smokeMs,
             "long_runtime_ms": $longMs,
             "smoke_budget_ms": ${{ matrix.smoke_budget_ms }},
