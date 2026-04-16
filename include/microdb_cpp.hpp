@@ -328,6 +328,21 @@ public:
         return microdb_row_get(table, row_buf, col_name, out, out_len);
     }
 
+    template <typename T>
+    microdb_err_t rel_row_set_pod(const microdb_table_t *table, void *row_buf, const char *col_name, const T &value) {
+        static_assert(std::is_trivially_copyable<T>::value, "rel_row_set_pod requires trivially copyable T");
+        return rel_row_set(table, row_buf, col_name, &value);
+    }
+
+    template <typename T>
+    microdb_err_t rel_row_get_pod(const microdb_table_t *table, const void *row_buf, const char *col_name, T *out_value) {
+        static_assert(std::is_trivially_copyable<T>::value, "rel_row_get_pod requires trivially copyable T");
+        if (out_value == nullptr) {
+            return MICRODB_ERR_INVALID;
+        }
+        return rel_row_get(table, row_buf, col_name, out_value, nullptr);
+    }
+
     microdb_err_t rel_insert(microdb_table_t *table, const void *row_buf) {
         if (!initialized_) {
             return MICRODB_ERR_INVALID;

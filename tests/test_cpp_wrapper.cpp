@@ -293,6 +293,47 @@ MDB_TEST(cpp_wrapper_rel_iter_delete_clear_and_admit) {
     ASSERT_EQ(count, 0u);
 }
 
+MDB_TEST(cpp_wrapper_rel_pod_row_helpers_roundtrip) {
+    microdb_schema_t schema;
+    microdb_table_t *table = nullptr;
+    uint8_t row[128] = { 0 };
+    uint8_t out_row[128] = { 0 };
+    uint32_t id = 88u;
+    uint8_t age = 19u;
+    uint32_t id_out = 0u;
+    uint8_t age_out = 0u;
+
+    ASSERT_EQ(g_db.rel_schema_init(&schema, "pod_users", 2u), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_schema_add(&schema, "id", MICRODB_COL_U32, sizeof(uint32_t), true), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_schema_add(&schema, "age", MICRODB_COL_U8, sizeof(uint8_t), false), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_schema_seal(&schema), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_table_create(&schema), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_table_get("pod_users", &table), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_row_set_pod(table, row, "id", id), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_row_set_pod(table, row, "age", age), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_insert(table, row), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_find_by(table, "id", &id, out_row), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_row_get_pod(table, out_row, "id", &id_out), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_row_get_pod(table, out_row, "age", &age_out), MICRODB_OK);
+    ASSERT_EQ(id_out, id);
+    ASSERT_EQ(age_out, age);
+}
+
+MDB_TEST(cpp_wrapper_rel_pod_row_helpers_null_invalid) {
+    microdb_schema_t schema;
+    microdb_table_t *table = nullptr;
+    uint8_t row[128] = { 0 };
+    uint32_t id = 1u;
+
+    ASSERT_EQ(g_db.rel_schema_init(&schema, "pod_null", 1u), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_schema_add(&schema, "id", MICRODB_COL_U32, sizeof(uint32_t), true), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_schema_seal(&schema), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_table_create(&schema), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_table_get("pod_null", &table), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_row_set_pod(table, row, "id", id), MICRODB_OK);
+    ASSERT_EQ(g_db.rel_row_get_pod<uint32_t>(table, row, "id", nullptr), MICRODB_ERR_INVALID);
+}
+
 MDB_TEST(cpp_wrapper_txn_reports_invalid_before_init) {
     microdb::cpp::Database db;
 
@@ -340,6 +381,8 @@ int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_ts_typed_helpers_f32);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_rel_create_insert_find_count);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_rel_iter_delete_clear_and_admit);
+    MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_rel_pod_row_helpers_roundtrip);
+    MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_rel_pod_row_helpers_null_invalid);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_txn_commit_persists_kv);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_txn_rollback_discards_kv);
     return MDB_RESULT();
