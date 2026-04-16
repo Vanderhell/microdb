@@ -40,7 +40,8 @@
 - [done] Managed stress sliced into smoke/long CTest lanes.
 - [done] Runtime envelope thresholds wired into managed stress smoke/long lanes (`--max-ms` gate).
 - [done] Per-platform calibration hooks and baseline documentation added (`MICRODB_MANAGED_STRESS_*_MAX_MS` + docs/MANAGED_STRESS_BASELINES.md).
-- [next] Wire calibrated thresholds into CI matrix/environment presets per target platform/profile.
+- [done] Calibrated thresholds wired into CI matrix via `CMakePresets.json` (`ci-debug-linux` / `ci-debug-windows`).
+- [next] Extend release workflow to consume dedicated release presets with profile-specific managed stress budgets.
 
 ### 1) Storage Capability Descriptor
 - Add capability fields to storage HAL:

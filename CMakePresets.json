@@ -1,0 +1,60 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 16,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "ci-debug-linux",
+      "displayName": "CI Debug Linux",
+      "binaryDir": "${sourceDir}/build/ci-debug-linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MICRODB_MANAGED_STRESS_SMOKE_MAX_MS": "3000",
+        "MICRODB_MANAGED_STRESS_LONG_MAX_MS": "12000"
+      }
+    },
+    {
+      "name": "ci-debug-windows",
+      "displayName": "CI Debug Windows",
+      "binaryDir": "${sourceDir}/build/ci-debug-windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MICRODB_MANAGED_STRESS_SMOKE_MAX_MS": "5000",
+        "MICRODB_MANAGED_STRESS_LONG_MAX_MS": "20000"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ci-debug-linux",
+      "configurePreset": "ci-debug-linux",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ci-debug-windows",
+      "configurePreset": "ci-debug-windows",
+      "configuration": "Debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "ci-debug-linux",
+      "configurePreset": "ci-debug-linux",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci-debug-windows",
+      "configurePreset": "ci-debug-windows",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
