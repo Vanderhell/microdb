@@ -2,6 +2,7 @@
 #define MICRODB_CPP_HPP
 
 #include <cstring>
+#include <type_traits>
 
 extern "C" {
 #include "microdb.h"
@@ -175,6 +176,21 @@ public:
             return MICRODB_ERR_INVALID;
         }
         return microdb_admit_kv_set(&db_, key, val_len, out);
+    }
+
+    template <typename T>
+    microdb_err_t kv_put_pod(const char *key, const T &value, uint32_t ttl = 0u) {
+        static_assert(std::is_trivially_copyable<T>::value, "kv_put_pod requires trivially copyable T");
+        return kv_set(key, &value, sizeof(T), ttl);
+    }
+
+    template <typename T>
+    microdb_err_t kv_get_pod(const char *key, T *out_value) {
+        static_assert(std::is_trivially_copyable<T>::value, "kv_get_pod requires trivially copyable T");
+        if (out_value == nullptr) {
+            return MICRODB_ERR_INVALID;
+        }
+        return kv_get(key, out_value, sizeof(T), nullptr);
     }
 
     microdb_err_t ts_register(const char *name, microdb_ts_type_t type, size_t raw_size = 0u) {

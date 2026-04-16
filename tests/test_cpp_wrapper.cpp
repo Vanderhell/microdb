@@ -133,6 +133,22 @@ MDB_TEST(cpp_wrapper_admit_kv_set) {
     ASSERT_EQ(g_db.kv_put("admit", &value, 1u), MICRODB_OK);
 }
 
+MDB_TEST(cpp_wrapper_kv_pod_helpers_roundtrip) {
+    uint32_t in = 0xAABBCCDDu;
+    uint32_t out = 0u;
+
+    ASSERT_EQ(g_db.kv_put_pod("pod_u32", in), MICRODB_OK);
+    ASSERT_EQ(g_db.kv_get_pod("pod_u32", &out), MICRODB_OK);
+    ASSERT_EQ(out, in);
+}
+
+MDB_TEST(cpp_wrapper_kv_pod_helpers_null_out_invalid) {
+    uint32_t in = 123u;
+
+    ASSERT_EQ(g_db.kv_put_pod("pod_null", in), MICRODB_OK);
+    ASSERT_EQ(g_db.kv_get_pod<uint32_t>("pod_null", nullptr), MICRODB_ERR_INVALID);
+}
+
 MDB_TEST(cpp_wrapper_ts_register_insert_last) {
     microdb_ts_sample_t last;
     uint32_t v1 = 11u;
@@ -295,6 +311,8 @@ int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_kv_set_get_del_exists);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_kv_iter_and_clear);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_admit_kv_set);
+    MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_kv_pod_helpers_roundtrip);
+    MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_kv_pod_helpers_null_out_invalid);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_ts_register_insert_last);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_ts_query_count_clear);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_admit_ts_insert);
