@@ -5,10 +5,56 @@
 
 static microdb_err_t aligned_read(void *ctx, uint32_t offset, void *buf, size_t len) {
     microdb_backend_aligned_adapter_ctx_t *adapter = (microdb_backend_aligned_adapter_ctx_t *)ctx;
+    microdb_storage_t *raw;
+    uint32_t unit;
+    uint64_t pos;
+    uint64_t end;
+    uint8_t *dst = (uint8_t *)buf;
     if (adapter == NULL || adapter->raw_storage == NULL || buf == NULL) {
         return MICRODB_ERR_INVALID;
     }
-    return adapter->raw_storage->read(adapter->raw_storage->ctx, offset, buf, len);
+    if (len == 0u) {
+        return MICRODB_OK;
+    }
+
+    raw = adapter->raw_storage;
+    unit = raw->write_size;
+    if (unit == 0u || adapter->bounce_buf == NULL || adapter->bounce_len != unit) {
+        return MICRODB_ERR_INVALID;
+    }
+    if ((uint64_t)offset + (uint64_t)len > (uint64_t)raw->capacity) {
+        return MICRODB_ERR_STORAGE;
+    }
+
+    if ((offset % unit) == 0u && (len % unit) == 0u) {
+        return raw->read(raw->ctx, offset, buf, len);
+    }
+
+    pos = (uint64_t)offset;
+    end = pos + (uint64_t)len;
+    while (pos < end) {
+        uint32_t block_base = (uint32_t)((pos / unit) * unit);
+        uint32_t block_end = block_base + unit;
+        uint64_t copy_start = pos;
+        uint32_t copy_len = block_end - (uint32_t)copy_start;
+        microdb_err_t rc;
+
+        if ((uint64_t)block_end > (uint64_t)raw->capacity) {
+            return MICRODB_ERR_STORAGE;
+        }
+        if ((uint64_t)copy_len > (end - copy_start)) {
+            copy_len = (uint32_t)(end - copy_start);
+        }
+
+        rc = raw->read(raw->ctx, block_base, adapter->bounce_buf, unit);
+        if (rc != MICRODB_OK) {
+            return rc;
+        }
+        memcpy(dst + (copy_start - offset), adapter->bounce_buf + ((uint32_t)copy_start - block_base), copy_len);
+        pos = copy_start + (uint64_t)copy_len;
+    }
+
+    return MICRODB_OK;
 }
 
 static microdb_err_t aligned_write(void *ctx, uint32_t offset, const void *buf, size_t len) {
@@ -16,8 +62,8 @@ static microdb_err_t aligned_write(void *ctx, uint32_t offset, const void *buf, 
     const uint8_t *src = (const uint8_t *)buf;
     microdb_storage_t *raw;
     uint32_t unit;
-    uint32_t pos;
-    uint32_t end;
+    uint64_t pos;
+    uint64_t end;
 
     if (adapter == NULL || adapter->raw_storage == NULL || src == NULL) {
         return MICRODB_ERR_INVALID;
@@ -36,16 +82,24 @@ static microdb_err_t aligned_write(void *ctx, uint32_t offset, const void *buf, 
         return MICRODB_ERR_STORAGE;
     }
 
-    pos = offset;
-    end = (uint32_t)(offset + len);
+    if ((offset % unit) == 0u && (len % unit) == 0u) {
+        return raw->write(raw->ctx, offset, buf, len);
+    }
+
+    pos = (uint64_t)offset;
+    end = pos + (uint64_t)len;
     while (pos < end) {
-        uint32_t block_base = (pos / unit) * unit;
+        uint32_t block_base = (uint32_t)((pos / unit) * unit);
         uint32_t block_end = block_base + unit;
-        uint32_t copy_start = pos;
-        uint32_t copy_len = block_end - copy_start;
+        uint64_t copy_start = pos;
+        uint32_t copy_len = block_end - (uint32_t)copy_start;
         microdb_err_t rc;
-        if (copy_len > (end - copy_start)) {
-            copy_len = end - copy_start;
+
+        if ((uint64_t)block_end > (uint64_t)raw->capacity) {
+            return MICRODB_ERR_STORAGE;
+        }
+        if ((uint64_t)copy_len > (end - copy_start)) {
+            copy_len = (uint32_t)(end - copy_start);
         }
 
         rc = raw->read(raw->ctx, block_base, adapter->bounce_buf, unit);
@@ -53,14 +107,14 @@ static microdb_err_t aligned_write(void *ctx, uint32_t offset, const void *buf, 
             return rc;
         }
 
-        memcpy(adapter->bounce_buf + (copy_start - block_base), src + (copy_start - offset), copy_len);
+        memcpy(adapter->bounce_buf + ((uint32_t)copy_start - block_base), src + (copy_start - offset), copy_len);
 
         rc = raw->write(raw->ctx, block_base, adapter->bounce_buf, unit);
         if (rc != MICRODB_OK) {
             return rc;
         }
 
-        pos = copy_start + copy_len;
+        pos = copy_start + (uint64_t)copy_len;
     }
 
     return MICRODB_OK;
@@ -92,6 +146,12 @@ microdb_err_t microdb_backend_aligned_adapter_init(microdb_storage_t *out_storag
         return MICRODB_ERR_INVALID;
     }
     if (raw_storage->capacity == 0u || raw_storage->erase_size == 0u || raw_storage->write_size <= 1u) {
+        return MICRODB_ERR_INVALID;
+    }
+    if ((raw_storage->capacity % raw_storage->write_size) != 0u) {
+        return MICRODB_ERR_INVALID;
+    }
+    if ((raw_storage->erase_size % raw_storage->write_size) != 0u) {
         return MICRODB_ERR_INVALID;
     }
 
