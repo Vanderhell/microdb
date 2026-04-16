@@ -28,6 +28,7 @@
 - [done] C++ wrapper baseline: done in staged commits (lifecycle/stats + KV + TS + REL + txn + typed helpers).
 - [in_progress] 10) Modular Backend Packaging + Linker-Friendliness.
 - [done] 10.1 optional backend targets + strip-link gate.
+- [done] Per-backend optional CMake toggles added for stub modules (aligned/NAND/eMMC/SD) with conditional test wiring.
 - [done] 1) capability descriptor module (microdb_backend_adapter.h) in optional adapter layer.
 - [done] 3) open-time compatibility classifier module (direct/via_adapter/unsupported) in optional adapter layer.
 - [done] Decision flow helper by backend name (registry + compat composition).
