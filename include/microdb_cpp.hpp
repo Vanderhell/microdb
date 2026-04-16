@@ -258,6 +258,30 @@ public:
         return microdb_admit_ts_insert(&db_, stream_name, sample_len, out);
     }
 
+    microdb_err_t ts_register_f32(const char *name) {
+        return ts_register(name, MICRODB_TS_F32, 0u);
+    }
+
+    microdb_err_t ts_register_i32(const char *name) {
+        return ts_register(name, MICRODB_TS_I32, 0u);
+    }
+
+    microdb_err_t ts_register_u32(const char *name) {
+        return ts_register(name, MICRODB_TS_U32, 0u);
+    }
+
+    microdb_err_t ts_insert_f32(const char *name, microdb_timestamp_t ts, float value) {
+        return ts_insert(name, ts, &value);
+    }
+
+    microdb_err_t ts_insert_i32(const char *name, microdb_timestamp_t ts, int32_t value) {
+        return ts_insert(name, ts, &value);
+    }
+
+    microdb_err_t ts_insert_u32(const char *name, microdb_timestamp_t ts, uint32_t value) {
+        return ts_insert(name, ts, &value);
+    }
+
     microdb_err_t rel_schema_init(microdb_schema_t *schema, const char *name, uint32_t max_rows) {
         return microdb_schema_init(schema, name, max_rows);
     }

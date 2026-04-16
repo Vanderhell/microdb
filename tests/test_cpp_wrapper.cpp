@@ -196,6 +196,26 @@ MDB_TEST(cpp_wrapper_admit_ts_insert) {
     ASSERT_EQ(g_db.ts_insert("admit_ts", 1u, &v), MICRODB_OK);
 }
 
+MDB_TEST(cpp_wrapper_ts_typed_helpers_u32) {
+    microdb_ts_sample_t last;
+
+    ASSERT_EQ(g_db.ts_register_u32("typed_u32"), MICRODB_OK);
+    ASSERT_EQ(g_db.ts_insert_u32("typed_u32", 300u, 123u), MICRODB_OK);
+    ASSERT_EQ(g_db.ts_last("typed_u32", &last), MICRODB_OK);
+    ASSERT_EQ(last.ts, 300u);
+    ASSERT_EQ(last.v.u32, 123u);
+}
+
+MDB_TEST(cpp_wrapper_ts_typed_helpers_f32) {
+    microdb_ts_sample_t last;
+
+    ASSERT_EQ(g_db.ts_register_f32("typed_f32"), MICRODB_OK);
+    ASSERT_EQ(g_db.ts_insert_f32("typed_f32", 400u, 9.5f), MICRODB_OK);
+    ASSERT_EQ(g_db.ts_last("typed_f32", &last), MICRODB_OK);
+    ASSERT_EQ(last.ts, 400u);
+    ASSERT_EQ(last.v.f32 == 9.5f, 1);
+}
+
 MDB_TEST(cpp_wrapper_rel_create_insert_find_count) {
     microdb_schema_t schema;
     microdb_table_t *table = nullptr;
@@ -316,6 +336,8 @@ int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_ts_register_insert_last);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_ts_query_count_clear);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_admit_ts_insert);
+    MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_ts_typed_helpers_u32);
+    MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_ts_typed_helpers_f32);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_rel_create_insert_find_count);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_rel_iter_delete_clear_and_admit);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_txn_commit_persists_kv);
