@@ -27,7 +27,7 @@ MDB_TEST(backend_decision_unknown_backend_is_unsupported) {
     microdb_backend_open_result_t r =
         microdb_backend_decide_by_name("missing", 1u, 256u, 0u, 0u);
     ASSERT_EQ(r.mode, MICRODB_BACKEND_OPEN_UNSUPPORTED);
-    ASSERT_EQ(r.reason, MICRODB_BACKEND_REASON_INVALID_CAPABILITY);
+    ASSERT_EQ(r.reason, MICRODB_BACKEND_REASON_BACKEND_NOT_REGISTERED);
 }
 
 MDB_TEST(backend_decision_managed_requires_adapter) {

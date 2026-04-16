@@ -11,7 +11,7 @@ microdb_backend_open_result_t microdb_backend_decide_by_name(const char *backend
     if (adapter == NULL) {
         microdb_backend_open_result_t out;
         out.mode = MICRODB_BACKEND_OPEN_UNSUPPORTED;
-        out.reason = MICRODB_BACKEND_REASON_INVALID_CAPABILITY;
+        out.reason = MICRODB_BACKEND_REASON_BACKEND_NOT_REGISTERED;
         return out;
     }
 
