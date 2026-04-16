@@ -40,8 +40,12 @@ static void open_db_with_capacity(uint32_t capacity_bytes) {
 
 static void run_profile_reopen_roundtrip(microdb_storage_profile_t profile, const char *file_suffix) {
     uint32_t expected_capacity = microdb_storage_profile_capacity_bytes(profile);
+#ifdef MICRODB_CAP_LIMIT_NONE
     microdb_effective_capacity_t cap;
     microdb_db_stats_t dbs;
+#else
+    microdb_stats_t stats;
+#endif
     uint8_t value = 42u;
     uint8_t out = 0u;
 
@@ -49,10 +53,16 @@ static void run_profile_reopen_roundtrip(microdb_storage_profile_t profile, cons
     microdb_port_posix_remove(g_path);
 
     open_db_with_capacity(expected_capacity);
+#ifdef MICRODB_CAP_LIMIT_NONE
     ASSERT_EQ(microdb_get_effective_capacity(&g_db, &cap), MICRODB_OK);
     ASSERT_EQ(microdb_get_db_stats(&g_db, &dbs), MICRODB_OK);
     ASSERT_EQ(cap.wal_budget_total > 0u, 1);
     ASSERT_EQ(dbs.effective_capacity_bytes, expected_capacity);
+#else
+    ASSERT_EQ(microdb_stats(&g_db, &stats), MICRODB_OK);
+    ASSERT_EQ(stats.wal_bytes_total > 0u, 1);
+    ASSERT_EQ(g_storage.capacity, expected_capacity);
+#endif
     ASSERT_EQ(microdb_kv_set(&g_db, "k", &value, 1u, 0u), MICRODB_OK);
     ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
     close_db();
@@ -60,9 +70,15 @@ static void run_profile_reopen_roundtrip(microdb_storage_profile_t profile, cons
     open_db_with_capacity(expected_capacity);
     ASSERT_EQ(microdb_kv_get(&g_db, "k", &out, 1u, NULL), MICRODB_OK);
     ASSERT_EQ(out, value);
+#ifdef MICRODB_CAP_LIMIT_NONE
     ASSERT_EQ(microdb_get_effective_capacity(&g_db, &cap), MICRODB_OK);
     ASSERT_EQ(microdb_get_db_stats(&g_db, &dbs), MICRODB_OK);
     ASSERT_EQ(dbs.effective_capacity_bytes, expected_capacity);
+#else
+    ASSERT_EQ(microdb_stats(&g_db, &stats), MICRODB_OK);
+    ASSERT_EQ(stats.wal_bytes_total > 0u, 1);
+    ASSERT_EQ(g_storage.capacity, expected_capacity);
+#endif
     close_db();
 
     microdb_port_posix_remove(g_path);
