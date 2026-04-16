@@ -42,7 +42,8 @@
 - [done] Per-platform calibration hooks and baseline documentation added (`MICRODB_MANAGED_STRESS_*_MAX_MS` + docs/MANAGED_STRESS_BASELINES.md).
 - [done] Calibrated thresholds wired into CI matrix via `CMakePresets.json` (`ci-debug-linux` / `ci-debug-windows`).
 - [done] Release workflow now consumes dedicated release presets (`release-linux` / `release-windows`) with profile-specific managed stress budgets.
-- [next] Add periodic baseline refresh task (scheduled CI) and update acceptance bands from historical runs.
+- [done] Periodic baseline refresh task added (scheduled CI + artifacts with measured runtimes/budgets).
+- [next] Recalibrate acceptance bands from accumulated historical artifacts (p95 + safety margin) per platform.
 
 ### 1) Storage Capability Descriptor
 - Add capability fields to storage HAL:

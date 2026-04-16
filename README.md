@@ -196,6 +196,7 @@ Managed adapter contract (fail-fast):
 - lane budgets are calibrated through CMake cache vars: `MICRODB_MANAGED_STRESS_SMOKE_MAX_MS` and `MICRODB_MANAGED_STRESS_LONG_MAX_MS` (see `docs/MANAGED_STRESS_BASELINES.md`)
 - CI uses `CMakePresets.json` (`ci-debug-linux`, `ci-debug-windows`) to apply platform-specific stress budgets consistently
 - release workflow now uses `CMakePresets.json` (`release-linux`, `release-windows`) with profile-specific stress budgets
+- scheduled baseline refresh workflow publishes runtime artifacts for ongoing threshold calibration
 
 Storage contract (fail-fast at `microdb_init`):
 - `erase_size` must be `> 0`

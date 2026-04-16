@@ -46,3 +46,18 @@ Defined in `CMakePresets.json` and consumed by `.github/workflows/release.yml`:
 
 Keep configured gates well above baseline jitter but low enough to catch serious
 performance regressions.
+
+## Periodic Refresh
+
+Scheduled workflow:
+
+- `.github/workflows/managed-baseline-refresh.yml`
+- cadence: weekly (Monday 03:00 UTC) + manual trigger
+- outputs per-platform JSON artifacts with measured smoke/long runtimes and
+  configured budgets
+
+Recommended update loop:
+
+1. Review last 8-12 baseline artifacts per platform.
+2. Set acceptance band to stay above p95 runtime + safety margin.
+3. Update preset thresholds in `CMakePresets.json`.

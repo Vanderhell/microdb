@@ -1,0 +1,91 @@
+name: Managed Baseline Refresh
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-debug
+            configure_preset: ci-debug-linux
+            build_preset: ci-debug-linux
+            test_preset: ci-debug-linux
+            smoke_budget_ms: 3000
+            long_budget_ms: 12000
+          - os: windows-latest
+            label: windows-debug
+            configure_preset: ci-debug-windows
+            build_preset: ci-debug-windows
+            test_preset: ci-debug-windows
+            smoke_budget_ms: 5000
+            long_budget_ms: 20000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure_preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build_preset }}
+
+      - name: Run managed stress lanes
+        shell: pwsh
+        run: |
+          $log = Join-Path $pwd "managed_stress_ctest.log"
+          ctest --preset "${{ matrix.test_preset }}" -R "test_backend_managed_stress_(smoke|long)" --output-on-failure 2>&1 |
+            Tee-Object -FilePath $log
+
+      - name: Extract lane runtimes
+        shell: pwsh
+        run: |
+          $logPath = Join-Path $pwd "managed_stress_ctest.log"
+          $txt = Get-Content $logPath -Raw
+
+          $smoke = [regex]::Match($txt, "test_backend_managed_stress_smoke[.\s]+Passed\s+([0-9.]+)\s+sec")
+          $long = [regex]::Match($txt, "test_backend_managed_stress_long[.\s]+Passed\s+([0-9.]+)\s+sec")
+
+          if (-not $smoke.Success -or -not $long.Success) {
+            Write-Error "Could not parse managed stress lane timings from ctest output."
+          }
+
+          $smokeSec = [double]$smoke.Groups[1].Value
+          $longSec = [double]$long.Groups[1].Value
+          $smokeMs = [math]::Round($smokeSec * 1000.0, 2)
+          $longMs = [math]::Round($longSec * 1000.0, 2)
+
+          $summary = @"
+          {
+            "os": "${{ matrix.label }}",
+            "preset": "${{ matrix.test_preset }}",
+            "date_utc": "$(Get-Date -AsUTC -Format "yyyy-MM-ddTHH:mm:ssZ")",
+            "smoke_runtime_ms": $smokeMs,
+            "long_runtime_ms": $longMs,
+            "smoke_budget_ms": ${{ matrix.smoke_budget_ms }},
+            "long_budget_ms": ${{ matrix.long_budget_ms }}
+          }
+          "@
+          $summaryPath = Join-Path $pwd "managed_stress_baseline_${{ matrix.label }}.json"
+          Set-Content -Path $summaryPath -Value $summary -Encoding ascii
+
+          "### Managed stress baseline (${{ matrix.label }})" >> $env:GITHUB_STEP_SUMMARY
+          "- Preset: `${{ matrix.test_preset }}`" >> $env:GITHUB_STEP_SUMMARY
+          "- Smoke runtime: ${smokeMs} ms (budget: ${{ matrix.smoke_budget_ms }} ms)" >> $env:GITHUB_STEP_SUMMARY
+          "- Long runtime: ${longMs} ms (budget: ${{ matrix.long_budget_ms }} ms)" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: managed-stress-baseline-${{ matrix.label }}
+          path: |
+            managed_stress_ctest.log
+            managed_stress_baseline_${{ matrix.label }}.json
