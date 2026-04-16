@@ -32,7 +32,8 @@
 - [done] 3) open-time compatibility classifier module (direct/via_adapter/unsupported) in optional adapter layer.
 - [done] Decision flow helper by backend name (registry + compat composition).
 - [in_progress] 4) ALIGNED adapter implementation started (RMW + bounce buffer shim + tests as optional module).
-- [next] Integrate decision flow + adapter activation path into higher-level backend open wiring.
+- [done] Optional backend open wiring helper (decision + adapter activation path) added as separate module.
+- [next] Start managed adapter skeleton (eMMC/NAND via managed layer contract) while keeping linker-friendly split.
 
 ### 1) Storage Capability Descriptor
 - Add capability fields to storage HAL:
