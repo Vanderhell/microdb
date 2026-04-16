@@ -89,3 +89,42 @@ jobs:
           path: |
             managed_stress_ctest.log
             managed_stress_baseline_${{ matrix.label }}.json
+
+  recommend-thresholds:
+    name: Recommend Thresholds
+    needs: refresh
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download baseline artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: managed-stress-baseline-*
+          path: baseline-artifacts
+          merge-multiple: true
+
+      - name: Generate recommendation report
+        shell: pwsh
+        run: |
+          ./scripts/recommend-managed-baselines.ps1 `
+            -InputDir ./baseline-artifacts `
+            -Quantile 0.95 `
+            -MarginPct 20 `
+            -MinHeadroomMs 50 `
+            -OutputJson ./managed-baseline-recommendations.json `
+            -OutputMarkdown ./managed-baseline-recommendations.md |
+            Tee-Object -FilePath ./managed-baseline-recommendations.log
+
+          "### Managed baseline threshold recommendations" >> $env:GITHUB_STEP_SUMMARY
+          Get-Content ./managed-baseline-recommendations.md | Select-Object -First 20 >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload recommendation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: managed-stress-threshold-recommendations
+          path: |
+            managed-baseline-recommendations.json
+            managed-baseline-recommendations.md
+            managed-baseline-recommendations.log

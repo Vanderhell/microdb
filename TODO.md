@@ -44,7 +44,8 @@
 - [done] Release workflow now consumes dedicated release presets (`release-linux` / `release-windows`) with profile-specific managed stress budgets.
 - [done] Periodic baseline refresh task added (scheduled CI + artifacts with measured runtimes/budgets).
 - [done] Recommendation tool added to compute thresholds from historical artifacts (`scripts/recommend-managed-baselines.ps1`).
-- [next] Run first multi-week calibration pass and apply recommended thresholds into presets.
+- [done] Baseline refresh workflow now runs aggregate recommendation step and publishes threshold report artifacts.
+- [next] Run first multi-week calibration pass and apply accepted recommended thresholds into presets.
 
 ### 1) Storage Capability Descriptor
 - Add capability fields to storage HAL:
