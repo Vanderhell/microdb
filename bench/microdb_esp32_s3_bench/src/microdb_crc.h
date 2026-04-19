@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_CRC_H
 #define MICRODB_CRC_H
 

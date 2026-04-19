@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_ARENA_H
 #define MICRODB_ARENA_H
 

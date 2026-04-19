@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 if(COMPILER_ID STREQUAL "MSVC")
     execute_process(
         COMMAND "${CC}" /nologo /I "${INCLUDE_DIR}" /c "${SRC}" /Fo"${OBJ}"

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include <stdint.h>
 
 #include "microdb_backend_adapter.h"

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_port_posix.h"
 
 #if defined(_WIN32)

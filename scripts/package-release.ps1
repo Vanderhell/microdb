@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 param(
     [string]$Version = "dev",
     [string]$BuildDir = "build_verify",

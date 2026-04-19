@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_BACKEND_OPEN_H
 #define MICRODB_BACKEND_OPEN_H
 

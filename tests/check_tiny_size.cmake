@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 if(NOT DEFINED DEFAULT_LIB OR NOT DEFINED TINY_LIB)
   message(FATAL_ERROR "DEFAULT_LIB and TINY_LIB must be provided")
 endif()

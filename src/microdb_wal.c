@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_internal.h"
 #include "microdb_crc.h"
 #include "microdb_arena.h"

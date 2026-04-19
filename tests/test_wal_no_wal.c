@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #define MICRODB_ENABLE_WAL 0
 #include "microtest.h"
 #include "microdb.h"

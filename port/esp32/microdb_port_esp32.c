@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_port_esp32.h"
 
 #include <stddef.h>

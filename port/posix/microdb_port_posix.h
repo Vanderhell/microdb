@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_PORT_POSIX_H
 #define MICRODB_PORT_POSIX_H
 

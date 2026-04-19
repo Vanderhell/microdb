@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_CAPACITY_PROFILE_H
 #define MICRODB_CAPACITY_PROFILE_H
 

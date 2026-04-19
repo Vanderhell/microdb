@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+# SPDX-License-Identifier: MIT
 set -eu
 
 VERSION="${1:-dev}"

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_backend_aligned_adapter.h"
 
 #include <stdlib.h>

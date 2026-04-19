@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_BACKEND_FS_ADAPTER_H
 #define MICRODB_BACKEND_FS_ADAPTER_H
 

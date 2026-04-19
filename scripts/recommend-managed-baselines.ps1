@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 param(
     [string]$InputDir = ".",
     [double]$Quantile = 0.95,

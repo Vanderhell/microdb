@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_crc.h"
 
 uint32_t microdb_crc32(uint32_t crc, const void *data, size_t len) {

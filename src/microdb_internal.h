@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_INTERNAL_H
 #define MICRODB_INTERNAL_H
 

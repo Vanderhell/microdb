@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microtest.h"
 #include "microdb.h"
 #include "../src/microdb_internal.h"

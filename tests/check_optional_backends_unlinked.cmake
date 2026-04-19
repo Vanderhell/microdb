@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 if(NOT DEFINED DEFAULT_LIB OR DEFAULT_LIB STREQUAL "")
     message(FATAL_ERROR "DEFAULT_LIB is required")
 endif()

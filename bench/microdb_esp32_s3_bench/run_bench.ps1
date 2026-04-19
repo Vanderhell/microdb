@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 param(
     [string]$Port = "COM17",
     [int]$Baud = 115200,

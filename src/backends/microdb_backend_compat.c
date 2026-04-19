@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_backend_compat.h"
 
 static microdb_backend_open_result_t make_result(microdb_backend_open_mode_t mode, microdb_backend_open_reason_t reason) {

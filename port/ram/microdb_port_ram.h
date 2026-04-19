@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_PORT_RAM_H
 #define MICRODB_PORT_RAM_H
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 param(
     [string]$RecommendationsJson,
     [string]$PresetsPath = "CMakePresets.json",

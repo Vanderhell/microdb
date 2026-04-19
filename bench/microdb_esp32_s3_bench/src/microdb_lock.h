@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_LOCK_H
 #define MICRODB_LOCK_H
 

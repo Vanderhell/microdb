@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #define MICRODB_KV_MAX_KEYS 128
 #include "microtest.h"
 #include "microdb.h"

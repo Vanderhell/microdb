@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_PORT_ESP32_H
 #define MICRODB_PORT_ESP32_H
 

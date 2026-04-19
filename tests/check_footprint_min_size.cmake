@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 if(NOT DEFINED EXE OR NOT EXISTS "${EXE}")
   message(FATAL_ERROR "EXE missing: ${EXE}")
 endif()
