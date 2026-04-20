@@ -80,11 +80,11 @@ static microdb_err_t microdb_ts_sample_capacity(const microdb_core_t *core, uint
 
 static void microdb_ts_set_value(microdb_ts_stream_t *stream, microdb_ts_sample_t *sample, const void *val) {
     if (stream->type == MICRODB_TS_F32) {
-        sample->v.f32 = *(const float *)val;
+        memcpy(&sample->v.f32, val, sizeof(sample->v.f32));
     } else if (stream->type == MICRODB_TS_I32) {
-        sample->v.i32 = *(const int32_t *)val;
+        memcpy(&sample->v.i32, val, sizeof(sample->v.i32));
     } else if (stream->type == MICRODB_TS_U32) {
-        sample->v.u32 = *(const uint32_t *)val;
+        memcpy(&sample->v.u32, val, sizeof(sample->v.u32));
     } else {
         memcpy(sample->v.raw, val, stream->raw_size);
     }
