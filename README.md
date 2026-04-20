@@ -11,6 +11,10 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-orange)](https://github.com/Vanderhell/microdb)
 [![Tests](https://img.shields.io/badge/tests-ctest-brightgreen)](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Vanderhell/microdb)](https://github.com/Vanderhell/microdb/releases)
+[![Wiki](https://img.shields.io/badge/docs-wiki-blue)](https://github.com/Vanderhell/microdb/wiki)
+[![Contributing](https://img.shields.io/badge/contributions-welcome-success)](CONTRIBUTING.md)
+[![Security](https://img.shields.io/badge/security-policy-important)](SECURITY.md)
 
 ## What is microdb?
 
