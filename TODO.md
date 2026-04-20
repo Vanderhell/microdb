@@ -67,7 +67,7 @@
    - add docs map/navigation page linking backend contracts and stress/baseline docs
    - make `port/esp32/microdb_port_esp32.c` explicitly discoverable as a reference implementation
    - mirror the same structure in GitHub Wiki sidebar/home
-3. [ ] Add RTOS reference port skeletons:
+3. [done] Add RTOS reference port skeletons:
    - `examples/freertos_port/` minimal `microdb_storage_t` adapter scaffolding
    - `examples/zephyr_port/` minimal `microdb_storage_t` adapter scaffolding
    - document required sync/flush semantics and lock hooks (`cfg.lock_create/lock/unlock/lock_destroy`)
@@ -79,7 +79,7 @@
    - relational `schema_version` and `on_migrate` workflow
    - migration patterns (add/remove/reshape columns) and compatibility constraints
    - tested migration example with persisted data across reopen/recovery
-6. [ ] Add `docs/PORT_AUTHORING_GUIDE.md` with annotated walkthrough:
+6. [done] Add `docs/PORT_AUTHORING_GUIDE.md` with annotated walkthrough:
    - use `port/esp32/microdb_port_esp32.c` as live reference port
    - explain field-by-field `microdb_storage_t` mapping to real driver hooks
    - call out `write_size = 1` core contract and when to use aligned adapter path

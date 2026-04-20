@@ -5,6 +5,8 @@ This guide shows how to author a real platform port for `microdb`.
 Primary live reference:
 
 - `port/esp32/microdb_port_esp32.c`
+- `examples/freertos_port/main.c` (RTOS lock/storage skeleton)
+- `examples/zephyr_port/main.c` (RTOS lock/storage skeleton)
 
 Use it as a template for mapping your platform driver to `microdb_storage_t`.
 
@@ -106,4 +108,3 @@ cfg.lock_destroy = my_mutex_destroy;
 - Setting `write_size` to natural media granularity and calling `microdb_init` directly.
 - Returning success from `sync()` before pending operations are durable.
 - Enabling thread-safe build without wiring lock callbacks.
-

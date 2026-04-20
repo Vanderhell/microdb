@@ -221,6 +221,7 @@ microdb supports three storage modes:
 - RAM-only: `cfg.storage = NULL`
 - POSIX file HAL for tests and simulation
 - ESP32 partition HAL via `esp_partition_*`
+- RTOS skeleton templates: `examples/freertos_port/`, `examples/zephyr_port/`
 
 Persistent layout starts with a WAL region and then separate KV, TS, and REL regions aligned to the storage erase size.
 
