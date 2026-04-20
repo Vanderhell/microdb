@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microtest.h"
 #include "microdb.h"
 #include "microdb_backend_adapter.h"
@@ -43,6 +44,16 @@ static microdb_backend_open_session_t g_open_session;
 static microdb_t g_db;
 static uint32_t g_now = 1000u;
 static uint32_t g_rng = 0x1234ABCDu;
+
+static int fail_runtime_gate(const char *op, long max_ms, double elapsed_ms) {
+    fprintf(stderr,
+            "%s failed: EXIT_FAILURE (%d) - elapsed=%.2f ms > budget=%ld ms\n",
+            op,
+            EXIT_FAILURE,
+            elapsed_ms,
+            max_ms);
+    return EXIT_FAILURE;
+}
 
 static microdb_timestamp_t mock_now(void) {
     return g_now++;
@@ -325,10 +336,7 @@ int main(int argc, char **argv) {
 
     elapsed_ms = ((double)(clock() - begin_ticks) * 1000.0) / (double)CLOCKS_PER_SEC;
     if (max_ms > 0 && elapsed_ms > (double)max_ms) {
-        fprintf(stderr,
-                "managed_stress_runtime_gate failed: elapsed=%.2f ms > budget=%ld ms\n",
-                elapsed_ms,
-                max_ms);
+        (void)fail_runtime_gate("managed_stress_runtime_gate", max_ms, elapsed_ms);
         if (rc == EXIT_SUCCESS) {
             rc = EXIT_FAILURE;
         }

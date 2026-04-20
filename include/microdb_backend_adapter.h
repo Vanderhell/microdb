@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_BACKEND_ADAPTER_H
 #define MICRODB_BACKEND_ADAPTER_H
 
@@ -34,8 +35,14 @@ typedef struct {
     microdb_storage_capability_t capability;
 } microdb_backend_adapter_t;
 
+typedef enum {
+    MICRODB_BACKEND_REGISTRY_OK = 0,
+    MICRODB_BACKEND_REGISTRY_ERR_INVALID = -1,
+    MICRODB_BACKEND_REGISTRY_ERR_FULL = -2
+} microdb_backend_registry_status_t;
+
 void microdb_backend_registry_reset(void);
-int microdb_backend_registry_register(const microdb_backend_adapter_t *adapter);
+microdb_backend_registry_status_t microdb_backend_registry_register(const microdb_backend_adapter_t *adapter);
 size_t microdb_backend_registry_count(void);
 const microdb_backend_adapter_t *microdb_backend_registry_get(size_t index);
 const microdb_backend_adapter_t *microdb_backend_registry_find(const char *name);

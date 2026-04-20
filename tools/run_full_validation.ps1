@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 param(
     [string]$BuildDir = "build",
     [string]$Config = "Debug",
@@ -128,3 +129,13 @@ $summaryFile = Join-Path $resultsDir ("validation_summary_{0}.md" -f $ts)
 $summary | Out-File -Encoding utf8 $summaryFile
 Write-Host ""
 Write-Host "Saved summary: $summaryFile"
+
+$trendScript = Join-Path $root "scripts\generate-results-trend-dashboard.ps1"
+if (Test-Path $trendScript) {
+    try {
+        & $trendScript -ResultsDir $resultsDir -TopRuns 20 -OutputMarkdown (Join-Path $resultsDir "trend_dashboard.md") | Out-Null
+        Write-Host "Updated trend dashboard: $(Join-Path $resultsDir "trend_dashboard.md")"
+    } catch {
+        Write-Warning "Trend dashboard generation failed: $($_.Exception.Message)"
+    }
+}

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_H
 #define MICRODB_H
 
@@ -223,6 +224,7 @@ typedef struct {
     } v;
 } microdb_ts_sample_t;
 
+const char *microdb_err_to_string(microdb_err_t err);
 microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg);
 microdb_err_t microdb_deinit(microdb_t *db);
 microdb_err_t microdb_flush(microdb_t *db);

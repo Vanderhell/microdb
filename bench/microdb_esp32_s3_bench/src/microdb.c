@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_internal.h"
 #include "microdb_lock.h"
 
@@ -21,6 +22,41 @@ static size_t microdb_bytes_from_kb(uint32_t ram_kb) {
 
 static size_t microdb_slice_bytes(size_t total, uint32_t pct) {
     return (total * (size_t)pct) / 100u;
+}
+
+const char *microdb_err_to_string(microdb_err_t err) {
+    switch (err) {
+        case MICRODB_OK:
+            return "MICRODB_OK";
+        case MICRODB_ERR_INVALID:
+            return "MICRODB_ERR_INVALID";
+        case MICRODB_ERR_NO_MEM:
+            return "MICRODB_ERR_NO_MEM";
+        case MICRODB_ERR_FULL:
+            return "MICRODB_ERR_FULL";
+        case MICRODB_ERR_NOT_FOUND:
+            return "MICRODB_ERR_NOT_FOUND";
+        case MICRODB_ERR_EXPIRED:
+            return "MICRODB_ERR_EXPIRED";
+        case MICRODB_ERR_STORAGE:
+            return "MICRODB_ERR_STORAGE";
+        case MICRODB_ERR_CORRUPT:
+            return "MICRODB_ERR_CORRUPT";
+        case MICRODB_ERR_SEALED:
+            return "MICRODB_ERR_SEALED";
+        case MICRODB_ERR_EXISTS:
+            return "MICRODB_ERR_EXISTS";
+        case MICRODB_ERR_DISABLED:
+            return "MICRODB_ERR_DISABLED";
+        case MICRODB_ERR_OVERFLOW:
+            return "MICRODB_ERR_OVERFLOW";
+        case MICRODB_ERR_SCHEMA:
+            return "MICRODB_ERR_SCHEMA";
+        case MICRODB_ERR_TXN_ACTIVE:
+            return "MICRODB_ERR_TXN_ACTIVE";
+        default:
+            return "MICRODB_ERR_UNKNOWN";
+    }
 }
 
 microdb_core_t *microdb_core(microdb_t *db) {

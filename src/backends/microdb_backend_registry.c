@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb_backend_adapter.h"
 
 #include <string.h>
@@ -15,25 +16,25 @@ void microdb_backend_registry_reset(void) {
     g_registry_count = 0u;
 }
 
-int microdb_backend_registry_register(const microdb_backend_adapter_t *adapter) {
+microdb_backend_registry_status_t microdb_backend_registry_register(const microdb_backend_adapter_t *adapter) {
     size_t i;
 
     if (adapter == NULL || adapter->name == NULL || adapter->name[0] == '\0') {
-        return -1;
+        return MICRODB_BACKEND_REGISTRY_ERR_INVALID;
     }
 
     for (i = 0u; i < g_registry_count; ++i) {
         if (strcmp(g_registry[i]->name, adapter->name) == 0) {
-            return 0;
+            return MICRODB_BACKEND_REGISTRY_OK;
         }
     }
 
     if (g_registry_count >= MICRODB_BACKEND_REGISTRY_MAX) {
-        return -2;
+        return MICRODB_BACKEND_REGISTRY_ERR_FULL;
     }
 
     g_registry[g_registry_count++] = adapter;
-    return 0;
+    return MICRODB_BACKEND_REGISTRY_OK;
 }
 
 size_t microdb_backend_registry_count(void) {

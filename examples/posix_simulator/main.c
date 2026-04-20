@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb.h"
 #include "microdb_port_posix.h"
 
@@ -19,6 +20,11 @@ typedef struct {
 
 static microdb_timestamp_t demo_now(void) {
     return g_now;
+}
+
+static int fail_microdb(const char *op, microdb_err_t rc) {
+    fprintf(stderr, "%s failed: %s (%d)\n", op, microdb_err_to_string(rc), (int)rc);
+    return 1;
 }
 
 static bool print_kv(const char *key, const void *val, size_t val_len, uint32_t ttl_remaining, void *ctx) {
@@ -76,23 +82,24 @@ int main(void) {
     microdb_ts_sample_t last_hum;
     size_t ts_count = 0u;
     uint32_t i;
+    microdb_err_t rc;
 
     microdb_port_posix_remove(g_demo_path);
     memset(&db, 0, sizeof(db));
     memset(&storage, 0, sizeof(storage));
     memset(&cfg, 0, sizeof(cfg));
 
-    if (microdb_port_posix_init(&storage, g_demo_path, 262144u) != MICRODB_OK) {
-        fprintf(stderr, "failed to init POSIX storage\n");
-        return 1;
+    rc = microdb_port_posix_init(&storage, g_demo_path, 262144u);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("microdb_port_posix_init", rc);
     }
 
     cfg.storage = &storage;
     cfg.ram_kb = 32u;
     cfg.now = demo_now;
-    if (microdb_init(&db, &cfg) != MICRODB_OK) {
-        fprintf(stderr, "failed to init microdb\n");
-        return 1;
+    rc = microdb_init(&db, &cfg);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("microdb_init", rc);
     }
 
     /* 1. KV: store 5 configuration items with TTL */
@@ -118,9 +125,9 @@ int main(void) {
     }
 
     /* 3. REL: create sensors table and insert 5 devices */
-    if (build_sensor_table(&db, &table) != MICRODB_OK) {
-        fprintf(stderr, "failed to create sensors table\n");
-        return 1;
+    rc = build_sensor_table(&db, &table);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("build_sensor_table", rc);
     }
     for (i = 0u; i < 5u; ++i) {
         sensor_row_t row;
@@ -134,16 +141,28 @@ int main(void) {
     }
 
     /* 4. Flush and shutdown */
-    (void)microdb_flush(&db);
-    (void)microdb_deinit(&db);
+    rc = microdb_flush(&db);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("microdb_flush", rc);
+    }
+    rc = microdb_deinit(&db);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("microdb_deinit", rc);
+    }
     microdb_port_posix_deinit(&storage);
 
     /* 5. Reopen and print stored state */
     memset(&db, 0, sizeof(db));
     memset(&storage, 0, sizeof(storage));
-    (void)microdb_port_posix_init(&storage, g_demo_path, 262144u);
+    rc = microdb_port_posix_init(&storage, g_demo_path, 262144u);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("microdb_port_posix_init(reopen)", rc);
+    }
     cfg.storage = &storage;
-    (void)microdb_init(&db, &cfg);
+    rc = microdb_init(&db, &cfg);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("microdb_init(reopen)", rc);
+    }
 
     printf("Reloaded KV entries:\n");
     (void)microdb_kv_iter(&db, print_kv, NULL);
@@ -160,12 +179,18 @@ int main(void) {
                last_hum.v.f32);
     }
 
-    if (build_sensor_table(&db, &table) == MICRODB_OK) {
+    rc = build_sensor_table(&db, &table);
+    if (rc == MICRODB_OK) {
         printf("Reloaded REL rows:\n");
         (void)microdb_rel_iter(&db, table, print_sensor_row, table);
+    } else {
+        return fail_microdb("build_sensor_table(reopen)", rc);
     }
 
-    (void)microdb_deinit(&db);
+    rc = microdb_deinit(&db);
+    if (rc != MICRODB_OK) {
+        return fail_microdb("microdb_deinit(reopen)", rc);
+    }
     microdb_port_posix_deinit(&storage);
     return 0;
 }

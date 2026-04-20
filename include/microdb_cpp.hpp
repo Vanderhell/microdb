@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef MICRODB_CPP_HPP
 #define MICRODB_CPP_HPP
 
@@ -10,6 +11,10 @@ extern "C" {
 
 namespace microdb {
 namespace cpp {
+
+inline const char *error_string(microdb_err_t err) {
+    return microdb_err_to_string(err);
+}
 
 class Database final {
 public:

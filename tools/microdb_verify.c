@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "microdb.h"
 #include "microdb_crc.h"
 
@@ -78,6 +79,34 @@ typedef struct {
     uint32_t sequence;
     uint32_t used_bytes;
 } wal_info_t;
+
+static const char *verify_code_to_string(int code) {
+    switch (code) {
+        case VERIFY_OK:
+            return "VERIFY_OK";
+        case VERIFY_USAGE:
+            return "VERIFY_USAGE";
+        case VERIFY_IO_ERROR:
+            return "VERIFY_IO_ERROR";
+        case VERIFY_INVALID_CONFIG:
+            return "VERIFY_INVALID_CONFIG";
+        case VERIFY_CORRUPT:
+            return "VERIFY_CORRUPT";
+        case VERIFY_UNINITIALIZED:
+            return "VERIFY_UNINITIALIZED";
+        default:
+            return "VERIFY_UNKNOWN";
+    }
+}
+
+static int fail_verify(const char *op, const char *detail, int code) {
+    fprintf(stderr, "%s failed: %s (%d)", op, verify_code_to_string(code), code);
+    if (detail != NULL && detail[0] != '\0') {
+        fprintf(stderr, " - %s", detail);
+    }
+    fprintf(stderr, "\n");
+    return code;
+}
 
 static uint32_t align_u32(uint32_t value, uint32_t align) {
     return (value + (align - 1u)) & ~(align - 1u);
@@ -527,31 +556,32 @@ int main(int argc, char **argv) {
 
     rc = parse_args(argc, argv, &cfg);
     if (rc != VERIFY_OK) {
+        (void)fail_verify("parse_args", "invalid arguments", rc);
         print_usage(argv[0]);
         return rc;
     }
 
     fp = fopen(cfg.image_path, "rb");
     if (fp == NULL) {
-        fprintf(stderr, "verify: cannot open image '%s'\n", cfg.image_path);
-        return VERIFY_IO_ERROR;
+        char detail[256];
+        (void)snprintf(detail, sizeof(detail), "cannot open image '%s'", cfg.image_path);
+        return fail_verify("fopen(image)", detail, VERIFY_IO_ERROR);
     }
     if (!file_size_u32(fp, &cap)) {
         fclose(fp);
-        fprintf(stderr, "verify: cannot read image size\n");
-        return VERIFY_IO_ERROR;
+        return fail_verify("file_size_u32", "cannot read image size", VERIFY_IO_ERROR);
     }
     if (!compute_layout(cap, &cfg, &layout)) {
         fclose(fp);
-        fprintf(stderr, "verify: invalid config/layout (ram/split/erase mismatch vs image size)\n");
-        return VERIFY_INVALID_CONFIG;
+        return fail_verify("compute_layout",
+                           "invalid config/layout (ram/split/erase mismatch vs image size)",
+                           VERIFY_INVALID_CONFIG);
     }
 
     if (!read_at(fp, layout.super_a_offset, super_a, sizeof(super_a)) ||
         !read_at(fp, layout.super_b_offset, super_b, sizeof(super_b))) {
         fclose(fp);
-        fprintf(stderr, "verify: cannot read superblocks\n");
-        return VERIFY_IO_ERROR;
+        return fail_verify("read_at(superblocks)", "cannot read superblocks", VERIFY_IO_ERROR);
     }
     sa.valid = validate_superblock(super_a, &sa.generation, &sa.active_bank);
     sb.valid = validate_superblock(super_b, &sb.generation, &sb.active_bank);
