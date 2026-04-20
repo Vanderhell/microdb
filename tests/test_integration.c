@@ -2,7 +2,9 @@
 #include "microtest.h"
 #include "microdb.h"
 #include "../port/posix/microdb_port_posix.h"
+#include "../src/microdb_internal.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef MICRODB_TEST_WITH_8KB
@@ -68,14 +70,34 @@ static void setup_db(void) {
     open_storage_db(&g_db, &g_storage, MICRODB_RAM_KB);
 }
 
+static void close_db_safe(bool expect_ok) {
+    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
+        microdb_err_t rc = microdb_deinit(&g_db);
+        if (expect_ok) {
+            ASSERT_EQ(rc, MICRODB_OK);
+        }
+        if (rc != MICRODB_OK && microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
+            free(microdb_core(&g_db)->heap);
+            memset(&g_db, 0, sizeof(g_db));
+        }
+    }
+}
+
+static void crash_drop_db_heap(void) {
+    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
+        free(microdb_core(&g_db)->heap);
+        memset(&g_db, 0, sizeof(g_db));
+    }
+}
+
 static void teardown_db(void) {
-    (void)microdb_deinit(&g_db);
+    close_db_safe(false);
     microdb_port_posix_deinit(&g_storage);
     microdb_port_posix_remove(g_path);
 }
 
 static void reopen_db(uint32_t ram_kb) {
-    ASSERT_EQ(microdb_deinit(&g_db), MICRODB_OK);
+    close_db_safe(true);
     microdb_port_posix_deinit(&g_storage);
     open_storage_db(&g_db, &g_storage, ram_kb);
 }
@@ -386,6 +408,7 @@ MDB_TEST(integration_storage_bytes_written_increase) {
 MDB_TEST(integration_reload_without_explicit_flush_uses_wal) {
     populate_all_engines(&g_db, 0u);
     microdb_port_posix_simulate_power_loss(&g_storage);
+    crash_drop_db_heap();
     microdb_port_posix_deinit(&g_storage);
     open_storage_db(&g_db, &g_storage, MICRODB_RAM_KB);
     assert_all_engines_present(&g_db);
