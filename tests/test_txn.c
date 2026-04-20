@@ -176,6 +176,17 @@ MDB_TEST(test_txn_commit_replay_idempotent_across_reboots) {
     }
 }
 
+MDB_TEST(test_txn_commit_preserves_ttl_expiration) {
+    uint8_t out = 0u;
+
+    ASSERT_EQ(microdb_txn_begin(&g_db), MICRODB_OK);
+    ASSERT_EQ(microdb_kv_set(&g_db, "ttl_txn", &(uint8_t){ 9u }, 1u, 5u), MICRODB_OK);
+    ASSERT_EQ(microdb_txn_commit(&g_db), MICRODB_OK);
+
+    g_now += 6u;
+    ASSERT_EQ(microdb_kv_get(&g_db, "ttl_txn", &out, 1u, NULL), MICRODB_ERR_EXPIRED);
+}
+
 int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, test_txn_commit_makes_values_visible);
     MDB_RUN_TEST(setup_db, teardown_db, test_txn_rollback_discards_values);
@@ -187,5 +198,6 @@ int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, test_txn_commit_under_wal_pressure_replays_after_reopen);
     MDB_RUN_TEST(setup_db, teardown_db, test_txn_flush_while_active_does_not_commit_staged);
     MDB_RUN_TEST(setup_db, teardown_db, test_txn_commit_replay_idempotent_across_reboots);
+    MDB_RUN_TEST(setup_db, teardown_db, test_txn_commit_preserves_ttl_expiration);
     return MDB_RESULT();
 }

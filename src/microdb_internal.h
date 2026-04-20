@@ -37,6 +37,7 @@ typedef struct {
     char key[MICRODB_KV_KEY_MAX_LEN];
     void *val_ptr;
     size_t val_len;
+    uint32_t expires_at;
     uint8_t op;
     uint8_t val_buf[MICRODB_KV_VAL_MAX_LEN];
 } microdb_txn_stage_entry_t;
