@@ -3,7 +3,9 @@
 #include "microdb.h"
 #include "../port/posix/microdb_port_posix.h"
 #include "../src/microdb_crc.h"
+#include "../src/microdb_internal.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 enum {
@@ -96,6 +98,13 @@ static void teardown_db(void) {
     (void)microdb_deinit(&g_db);
     microdb_port_posix_deinit(&g_storage);
     microdb_port_posix_remove(g_path);
+}
+
+static void crash_drop_db_heap(void) {
+    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
+        free(microdb_core(&g_db)->heap);
+    }
+    memset(&g_db, 0, sizeof(g_db));
 }
 
 MDB_TEST(test_manual_compact_resets_wal) {
@@ -201,9 +210,9 @@ MDB_TEST(test_recovery_after_interrupted_compact) {
     ASSERT_EQ(g_storage.sync(g_storage.ctx), MICRODB_OK);
 
     microdb_port_posix_simulate_power_loss(&g_storage);
+    crash_drop_db_heap();
     microdb_port_posix_deinit(&g_storage);
 
-    memset(&g_db, 0, sizeof(g_db));
     memset(&g_storage, 0, sizeof(g_storage));
     memset(&cfg, 0, sizeof(cfg));
     cfg.storage = &g_storage;
@@ -257,9 +266,9 @@ MDB_TEST(test_legacy_compact_markers_do_not_change_recovery_outcome) {
     ASSERT_EQ(g_storage.sync(g_storage.ctx), MICRODB_OK);
 
     microdb_port_posix_simulate_power_loss(&g_storage);
+    crash_drop_db_heap();
     microdb_port_posix_deinit(&g_storage);
 
-    memset(&g_db, 0, sizeof(g_db));
     memset(&g_storage, 0, sizeof(g_storage));
     memset(&cfg, 0, sizeof(cfg));
     cfg.storage = &g_storage;
