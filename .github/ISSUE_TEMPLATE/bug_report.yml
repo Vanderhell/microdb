@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a reproducible bug in microdb
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please provide a minimal, reproducible report.
+  - type: input
+    id: version
+    attributes:
+      label: Version / Commit
+      description: Tag or commit SHA where the issue occurs
+      placeholder: v1.2.0 or abc1234
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: OS, compiler, target (e.g., ESP32, Linux x64)
+      placeholder: Ubuntu 24.04, clang 18, x86_64
+    validations:
+      required: true
+  - type: dropdown
+    id: storage_mode
+    attributes:
+      label: Storage mode
+      options:
+        - RAM-only
+        - POSIX file backend
+        - ESP32 partition backend
+        - Optional adapter path
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Configure with ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Sanitizer output
+      description: Paste relevant output
+      render: shell
+

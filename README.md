@@ -39,6 +39,15 @@ and can operate either in RAM-only mode or with a storage HAL for persistence an
 - Release checklist: see [RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
 - Release tag template: see [RELEASE_TAG_TEMPLATE.md](docs/RELEASE_TAG_TEMPLATE.md)
 
+## Project Governance
+
+- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Release log: [RELEASE_LOG.md](RELEASE_LOG.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Support policy: [SUPPORT.md](SUPPORT.md)
+
 ## Why not SQLite?
 
 SQLite is excellent, but it targets a different operating point.
@@ -107,6 +116,31 @@ db.txn_commit();
 db.deinit();
 ```
 
+## Optional wrappers and adapter modules
+
+Core `microdb` is intentionally lean. Extra wrappers/adapters are separate modules and can be toggled in CMake.
+
+Build toggles:
+- `MICRODB_BUILD_JSON_WRAPPER` (default `ON`)
+- `MICRODB_BUILD_IMPORT_EXPORT` (default `ON`)
+- `MICRODB_BUILD_OPTIONAL_BACKENDS` (default `ON`)
+- `MICRODB_BUILD_BACKEND_ALIGNED_STUB` / `MICRODB_BUILD_BACKEND_NAND_STUB` / `MICRODB_BUILD_BACKEND_EMMC_STUB` / `MICRODB_BUILD_BACKEND_SD_STUB` / `MICRODB_BUILD_BACKEND_FS_STUB` / `MICRODB_BUILD_BACKEND_BLOCK_STUB`
+
+Wrapper targets:
+- `microdb_json_wrapper`
+- `microdb_import_export` (links to `microdb_json_wrapper` when available)
+- `microdb_backend_registry`
+- `microdb_backend_compat`
+- `microdb_backend_decision`
+- `microdb_backend_aligned_adapter`
+- `microdb_backend_managed_adapter`
+- `microdb_backend_fs_adapter`
+- `microdb_backend_open`
+
+Core contract:
+- optional modules are not linked into `microdb` core by default.
+- `microdb` must remain independent from optional wrapper/backend targets.
+
 **3. Use all three engines:**
 ```c
 // Key-value
@@ -138,6 +172,12 @@ Configuration is compile-time first, with a small runtime override surface in `m
 - `MICRODB_LOG(level, fmt, ...)` enables internal diagnostic logging
 - smallest-size variant is available as CMake target `microdb_tiny` (KV-only, TS/REL/WAL disabled, weaker power-fail durability)
 - strict smallest **durable** profile is available as `MICRODB_PROFILE_FOOTPRINT_MIN` (KV + WAL + reopen/recovery contract)
+
+Storage budget (separate from RAM budget):
+- storage capacity comes from `microdb_storage_t.capacity` (bytes)
+- geometry comes from `microdb_storage_t.erase_size` and `microdb_storage_t.write_size`
+- current fail-fast storage contract requires `erase_size > 0` and `write_size == 1`
+- use `tools/microdb_capacity_estimator.html` for storage/layout planning (`2/4/8/16/32 MiB` profiles)
 
 ## KV engine
 
