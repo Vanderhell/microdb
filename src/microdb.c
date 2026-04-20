@@ -848,9 +848,7 @@ microdb_err_t microdb_admit_kv_set(microdb_t *db, const char *key, size_t val_le
             out->would_compact = 1u;
         } else {
             out->status = MICRODB_ERR_NO_MEM;
-            if (out->deterministic_budget_ok != 0u) {
-                out->deterministic_budget_ok = 1u;
-            }
+            out->deterministic_budget_ok = 0u;
             MICRODB_UNLOCK(db);
             return MICRODB_OK;
         }
@@ -1022,7 +1020,9 @@ microdb_err_t microdb_admit_rel_insert(microdb_t *db, const char *table_name, si
         }
     }
 
-    out->deterministic_budget_ok = 1u;
+    if (out->deterministic_budget_ok == 0u && out->would_degrade == 0u) {
+        out->deterministic_budget_ok = 1u;
+    }
     out->status = MICRODB_OK;
     MICRODB_UNLOCK(db);
     return MICRODB_OK;

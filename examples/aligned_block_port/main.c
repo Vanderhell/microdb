@@ -77,8 +77,8 @@ static void app_fill_raw_storage(microdb_storage_t *raw, app_block_ctx_t *ctx) {
     raw->write = app_raw_write;
     raw->erase = app_raw_erase;
     raw->sync = app_raw_sync;
-    raw->capacity = 0u;    /* TODO: set from real medium */
-    raw->erase_size = 0u;  /* TODO: set erase block size (>0) */
+    raw->capacity = 256u * 1024u; /* Placeholder: replace with real medium capacity */
+    raw->erase_size = 4096u;      /* Placeholder: replace with real erase block size (>0) */
     raw->write_size = 8u;  /* Example: non-byte-write medium */
     raw->ctx = ctx;
 }
@@ -121,4 +121,3 @@ int app_microdb_deinit_aligned(void) {
     microdb_backend_aligned_adapter_deinit(&g_opened_storage);
     return rc;
 }
-
