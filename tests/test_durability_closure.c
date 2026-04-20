@@ -220,7 +220,7 @@ MDB_TEST(power_cut_after_each_compact_step_keeps_committed_state) {
 
     for (fp = 1u; fp < 512u; ++fp) {
         memcpy(g_store.bytes, baseline, sizeof(baseline));
-        ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_OK);
+        crash_reopen();
         g_store.step = 0;
         g_store.trace_count = 0u;
         g_store.fail_at_step = (int32_t)fp;
