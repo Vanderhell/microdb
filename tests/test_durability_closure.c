@@ -133,14 +133,26 @@ static void crash_reopen(void) {
 }
 
 static void clean_reopen(void) {
-    ASSERT_EQ(microdb_deinit(&g_db), MICRODB_OK);
-    memset(&g_db, 0, sizeof(g_db));
+    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
+        microdb_err_t rc = microdb_deinit(&g_db);
+        ASSERT_EQ(rc, MICRODB_OK);
+        if (rc != MICRODB_OK && microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
+            free(microdb_core(&g_db)->heap);
+            memset(&g_db, 0, sizeof(g_db));
+        }
+    } else {
+        memset(&g_db, 0, sizeof(g_db));
+    }
     ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_OK);
 }
 
 static void teardown_db(void) {
     if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
-        (void)microdb_deinit(&g_db);
+        microdb_err_t rc = microdb_deinit(&g_db);
+        if (rc != MICRODB_OK && microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
+            free(microdb_core(&g_db)->heap);
+            memset(&g_db, 0, sizeof(g_db));
+        }
     }
 }
 
