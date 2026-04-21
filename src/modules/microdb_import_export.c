@@ -470,6 +470,10 @@ microdb_err_t microdb_ie_export_kv_json(microdb_t *db,
         if (rc != MICRODB_OK) return rc;
         rc = ie_lookup_ttl(db, key, &ttl);
         if (rc != MICRODB_OK) return rc;
+        if (ttl == UINT32_MAX) {
+            /* kv_iter uses UINT32_MAX as "no expiry" sentinel; JSON IE uses ttl=0 for persistent keys. */
+            ttl = 0u;
+        }
 
         rc = microdb_json_encode_kv_record(key, value_buf, value_len, ttl, rec, sizeof(rec), &rec_used);
         if (rc != MICRODB_OK) return rc;

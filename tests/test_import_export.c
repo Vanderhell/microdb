@@ -63,6 +63,7 @@ MDB_TEST(ie_export_import_roundtrip) {
     ASSERT_EQ(microdb_ie_export_kv_json(&g_src, keys, 2u, payload, sizeof(payload), &used, &exported), MICRODB_OK);
     ASSERT_GT(used, 0u);
     ASSERT_EQ(exported, 2u);
+    ASSERT_EQ(strstr(payload, "\"key\":\"k2\",\"ttl\":0") != NULL, 1);
 
     ASSERT_EQ(microdb_ie_import_kv_json(&g_dst, payload, NULL, &imported, &skipped), MICRODB_OK);
     ASSERT_EQ(imported, 2u);
