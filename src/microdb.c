@@ -106,14 +106,7 @@ static uint32_t microdb_kv_tombstone_count(const microdb_core_t *core) {
 }
 
 static uint32_t microdb_kv_live_value_bytes_local(const microdb_core_t *core) {
-    uint32_t i;
-    uint32_t total = 0u;
-    for (i = 0u; i < core->kv.bucket_count; ++i) {
-        if (core->kv.buckets[i].state == 1u) {
-            total += core->kv.buckets[i].val_len;
-        }
-    }
-    return total;
+    return core->kv.live_value_bytes;
 }
 
 static const microdb_kv_bucket_t *microdb_kv_find_bucket_const(const microdb_core_t *core, const char *key) {
