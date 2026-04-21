@@ -4,6 +4,9 @@
 #include "microdb_arena.h"
 
 #include <string.h>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 #define MICRODB_REL_ROW_SCRATCH_MAX 1024u
 
@@ -97,6 +100,23 @@ static void *rel_row_ptr_mut(microdb_table_t *table, uint32_t row_idx) {
 
 static int rel_key_cmp(const void *a, const void *b, size_t size) {
     return memcmp(a, b, size);
+}
+
+static uint32_t rel_ctz_u32(uint32_t value) {
+#if defined(_MSC_VER)
+    unsigned long idx;
+    _BitScanForward(&idx, value);
+    return (uint32_t)idx;
+#elif defined(__GNUC__) || defined(__clang__)
+    return (uint32_t)__builtin_ctz(value);
+#else
+    uint32_t idx = 0u;
+    while ((value & 1u) == 0u) {
+        value >>= 1u;
+        idx++;
+    }
+    return idx;
+#endif
 }
 
 static const microdb_col_desc_t *rel_index_col(const microdb_table_t *table);
@@ -220,20 +240,17 @@ static uint32_t rel_find_free_row(const microdb_table_t *table) {
     uint32_t alive_bytes = (table->max_rows + 7u) / 8u;
 
     for (byte_idx = 0u; byte_idx < alive_bytes; ++byte_idx) {
-        uint8_t byte = table->alive_bitmap[byte_idx];
-        uint32_t bit;
-        if (byte == 0xFFu) {
+        uint32_t row_base = byte_idx * 8u;
+        uint8_t effective = table->alive_bitmap[byte_idx];
+        if (row_base + 8u > table->max_rows) {
+            uint32_t valid_bits = table->max_rows - row_base;
+            uint8_t valid_mask = (uint8_t)((1u << valid_bits) - 1u);
+            effective |= (uint8_t)(~valid_mask);
+        }
+        if (effective == 0xFFu) {
             continue;
         }
-        for (bit = 0u; bit < 8u; ++bit) {
-            uint32_t row_idx = (byte_idx * 8u) + bit;
-            if (row_idx >= table->max_rows) {
-                break;
-            }
-            if (((byte >> bit) & 1u) == 0u) {
-                return row_idx;
-            }
-        }
+        return row_base + rel_ctz_u32((uint32_t)(uint8_t)(~effective));
     }
 
     return UINT32_MAX;

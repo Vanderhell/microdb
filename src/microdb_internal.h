@@ -14,6 +14,7 @@ typedef struct {
 
 typedef struct {
     uint8_t state;
+    uint32_t key_hash;
     char key[MICRODB_KV_KEY_MAX_LEN];
     uint32_t val_offset;
     uint32_t val_len;
@@ -30,6 +31,7 @@ typedef struct {
     uint8_t *value_store;
     uint32_t value_capacity;
     uint32_t value_used;
+    uint32_t live_value_bytes;
     uint32_t access_clock;
 } microdb_kv_state_t;
 
@@ -46,11 +48,12 @@ typedef struct {
     char name[MICRODB_TS_STREAM_NAME_LEN];
     microdb_ts_type_t type;
     size_t raw_size;
+    uint32_t sample_stride;
     uint32_t head;
     uint32_t tail;
     uint32_t count;
     uint32_t capacity;
-    microdb_ts_sample_t *buf;
+    uint8_t *buf;
     bool registered;
 } microdb_ts_stream_t;
 
@@ -149,6 +152,7 @@ typedef struct {
     uint32_t wal_used;
     uint8_t wal_compact_auto;
     uint8_t wal_compact_threshold_pct;
+    uint8_t wal_sync_mode;
     microdb_err_t (*on_migrate)(microdb_t *db, const char *table_name, uint16_t old_version, uint16_t new_version);
     bool storage_loading;
     bool wal_replaying;

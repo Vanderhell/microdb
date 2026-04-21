@@ -110,3 +110,23 @@
 7. [done] `rel_find_free_row` performance improvement:
    - optimize alive bitmap scan from bit-by-bit to byte-level fast path
    - add benchmark/regression check for fragmented-table insert path
+
+## Performance Optimization Roadmap (2026-04-21)
+1. [done] KV live-bytes accounting O(1):
+   - replace per-write O(n) live-value scan with incremental counter
+   - keep compaction heuristic semantics unchanged
+2. [done] KV probe prefilter by cached key hash:
+   - store per-bucket hash and check hash before `strncmp`
+   - preserve existing key equality semantics
+3. [done] WAL append stack pressure reduction:
+   - remove `uint8_t entry[1552]` staging buffer in `microdb_append_wal_entry`
+   - write header/payload/padding directly to storage with same CRC format
+4. [done] REL free-row bit scan fast path:
+   - replace inner 8-bit loop with `ctz`/lookup fast first-zero-bit resolution
+5. [done] WAL durability mode split (opt-in):
+   - keep current per-entry sync as default contract
+   - add explicit relaxed/group-commit mode behind runtime config flag + docs
+6. [done] TS per-stream packed sample layout:
+   - avoid fixed `union raw[16]` cost for scalar streams
+   - switched TS ring storage to per-stream byte stride (`sizeof(timestamp)+value_size`)
+   - kept public API/sample type unchanged; WAL snapshot/recovery paths updated and passing

@@ -33,9 +33,10 @@ MDB_TEST(ts_downsample_keeps_count_at_capacity) {
     uint32_t i;
     uint32_t value;
     size_t count = 0u;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "down", MICRODB_TS_U32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity + 1u; ++i) {
         value = i;
         ASSERT_EQ(microdb_ts_insert(&g_db, "down", i, &value), MICRODB_OK);
@@ -49,9 +50,10 @@ MDB_TEST(ts_downsample_merges_two_oldest_u32_samples) {
     uint32_t value;
     microdb_ts_sample_t out[256];
     size_t out_count = 0u;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "down", MICRODB_TS_U32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity + 1u; ++i) {
         value = i;
         ASSERT_EQ(microdb_ts_insert(&g_db, "down", i, &value), MICRODB_OK);
@@ -67,9 +69,10 @@ MDB_TEST(ts_downsample_merges_two_oldest_i32_samples) {
     microdb_ts_sample_t out[256];
     size_t out_count = 0u;
     uint32_t i;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "downi", MICRODB_TS_I32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity + 1u; ++i) {
         ASSERT_EQ(microdb_ts_insert(&g_db, "downi", i, &values[i % 5u]), MICRODB_OK);
     }
@@ -82,9 +85,10 @@ MDB_TEST(ts_downsample_merges_two_oldest_f32_samples) {
     microdb_ts_sample_t out[256];
     size_t out_count = 0u;
     uint32_t i;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "downf", MICRODB_TS_F32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity + 1u; ++i) {
         value = (float)i;
         ASSERT_EQ(microdb_ts_insert(&g_db, "downf", i, &value), MICRODB_OK);
@@ -101,9 +105,10 @@ MDB_TEST(ts_downsample_raw_merges_oldest_pair_bytes) {
     microdb_ts_sample_t out[256];
     size_t out_count = 0u;
     uint32_t i;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "raw", MICRODB_TS_RAW, 3u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     ASSERT_EQ(microdb_ts_insert(&g_db, "raw", 0u, raw_a), MICRODB_OK);
     ASSERT_EQ(microdb_ts_insert(&g_db, "raw", 1u, raw_b), MICRODB_OK);
     for (i = 2u; i < capacity; ++i) {

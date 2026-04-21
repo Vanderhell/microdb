@@ -24,8 +24,61 @@ static microdb_core_t *test_core(void) {
     return microdb_core(&g_db);
 }
 
+static void test_make_key(char *buf, size_t buf_len, uint32_t index);
+
 static uint32_t test_kv_capacity(void) {
     return MICRODB_KV_MAX_KEYS - MICRODB_TXN_STAGE_KEYS;
+}
+
+static uint32_t test_kv_hash(const char *key) {
+    uint32_t hash = 2166136261u;
+    size_t i;
+
+    for (i = 0u; key[i] != '\0'; ++i) {
+        hash ^= (uint8_t)key[i];
+        hash *= 16777619u;
+    }
+    return hash;
+}
+
+static uint32_t test_kv_manual_live_value_bytes(void) {
+    microdb_core_t *core = test_core();
+    uint32_t i;
+    uint32_t total = 0u;
+
+    for (i = 0u; i < core->kv.bucket_count; ++i) {
+        const microdb_kv_bucket_t *bucket = &core->kv.buckets[i];
+        if (bucket->state == 1u) {
+            total += bucket->val_len;
+        }
+    }
+    return total;
+}
+
+static bool test_find_probe_pair(char *out_a, size_t out_a_len, char *out_b, size_t out_b_len) {
+    microdb_core_t *core = test_core();
+    uint32_t mask = core->kv.bucket_count - 1u;
+    uint32_t i;
+    uint32_t j;
+    char key_i[16];
+    char key_j[16];
+
+    for (i = 0u; i < 512u; ++i) {
+        test_make_key(key_i, sizeof(key_i), i);
+        for (j = i + 1u; j < 512u; ++j) {
+            uint32_t hash_i;
+            uint32_t hash_j;
+            test_make_key(key_j, sizeof(key_j), j);
+            hash_i = test_kv_hash(key_i);
+            hash_j = test_kv_hash(key_j);
+            if ((hash_i & mask) == (hash_j & mask) && hash_i != hash_j) {
+                memcpy(out_a, key_i, out_a_len);
+                memcpy(out_b, key_j, out_b_len);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 static const microdb_kv_bucket_t *test_find_bucket(const char *key) {
@@ -416,6 +469,46 @@ MDB_TEST(kv_compaction_triggers_when_fragmentation_exceeds_half) {
     ASSERT_EQ(test_core()->kv.value_used, 8u);
 }
 
+MDB_TEST(kv_live_value_bytes_counter_matches_manual_sum) {
+    uint8_t a[5] = { 1u, 2u, 3u, 4u, 5u };
+    uint8_t b[3] = { 7u, 8u, 9u };
+    uint8_t c[2] = { 9u, 9u };
+
+    ASSERT_EQ(microdb_kv_put(&g_db, "k_a", a, sizeof(a)), MICRODB_OK);
+    ASSERT_EQ(microdb_kv_put(&g_db, "k_b", b, sizeof(b)), MICRODB_OK);
+    ASSERT_EQ(microdb_kv_put(&g_db, "k_a", c, sizeof(c)), MICRODB_OK);
+    ASSERT_EQ(microdb_kv_del(&g_db, "k_b"), MICRODB_OK);
+    ASSERT_EQ(test_core()->kv.live_value_bytes, test_kv_manual_live_value_bytes());
+}
+
+MDB_TEST(kv_hash_prefilter_still_requires_key_match) {
+    char key_a[16] = { 0 };
+    char key_b[16] = { 0 };
+    uint8_t v_a = 1u;
+    uint8_t v_b = 2u;
+    uint8_t out = 0u;
+    size_t out_len = 0u;
+    microdb_core_t *core = test_core();
+    uint32_t i;
+
+    ASSERT_EQ(test_find_probe_pair(key_a, sizeof(key_a), key_b, sizeof(key_b)), 1);
+    ASSERT_EQ(microdb_kv_put(&g_db, key_a, &v_a, sizeof(v_a)), MICRODB_OK);
+    ASSERT_EQ(microdb_kv_put(&g_db, key_b, &v_b, sizeof(v_b)), MICRODB_OK);
+
+    for (i = 0u; i < core->kv.bucket_count; ++i) {
+        microdb_kv_bucket_t *bucket = &core->kv.buckets[i];
+        if (bucket->state == 1u && strcmp(bucket->key, key_a) == 0) {
+            bucket->key_hash = test_kv_hash(key_b);
+            break;
+        }
+    }
+    ASSERT_EQ(i < core->kv.bucket_count, 1);
+
+    ASSERT_EQ(microdb_kv_get(&g_db, key_b, &out, sizeof(out), &out_len), MICRODB_OK);
+    ASSERT_EQ(out_len, 1u);
+    ASSERT_EQ(out, v_b);
+}
+
 MDB_TEST(kv_iter_null_callback_invalid) {
     ASSERT_EQ(microdb_kv_iter(&g_db, NULL, NULL), MICRODB_ERR_INVALID);
 }
@@ -458,6 +551,8 @@ int main(void) {
     MDB_RUN_TEST(setup_basic, teardown_db, kv_lru_exists_refreshes_recentness);
     MDB_RUN_TEST(setup_basic, teardown_db, kv_overflow_reports_required_size);
     MDB_RUN_TEST(setup_basic, teardown_db, kv_compaction_triggers_when_fragmentation_exceeds_half);
+    MDB_RUN_TEST(setup_basic, teardown_db, kv_live_value_bytes_counter_matches_manual_sum);
+    MDB_RUN_TEST(setup_basic, teardown_db, kv_hash_prefilter_still_requires_key_match);
     MDB_RUN_TEST(setup_basic, teardown_db, kv_iter_null_callback_invalid);
     MDB_RUN_TEST(setup_basic, teardown_db, kv_set_null_value_invalid);
     return MDB_RESULT();

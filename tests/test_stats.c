@@ -35,6 +35,21 @@ static void setup_storage_db(void) {
     ASSERT_EQ(microdb_init(&g_db, &cfg), MICRODB_OK);
 }
 
+static void setup_storage_low_wal_threshold_db(void) {
+    microdb_cfg_t cfg;
+
+    microdb_port_posix_remove(g_path);
+    memset(&g_db, 0, sizeof(g_db));
+    memset(&g_storage, 0, sizeof(g_storage));
+    ASSERT_EQ(microdb_port_posix_init(&g_storage, g_path, 65536u), MICRODB_OK);
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.storage = &g_storage;
+    cfg.ram_kb = 32u;
+    cfg.wal_compact_auto = 1u;
+    cfg.wal_compact_threshold_pct = 1u;
+    ASSERT_EQ(microdb_init(&g_db, &cfg), MICRODB_OK);
+}
+
 static void teardown_storage_db(void) {
     (void)microdb_deinit(&g_db);
     microdb_port_posix_deinit(&g_storage);
@@ -235,6 +250,48 @@ MDB_TEST(test_admission_api_kv_ts_rel) {
     ASSERT_EQ(a.status, MICRODB_OK);
 }
 
+MDB_TEST(test_admission_rel_would_compact_clears_deterministic_budget) {
+    microdb_admission_t a;
+    microdb_schema_t s;
+    microdb_table_t *t = NULL;
+    uint8_t row[32] = {0};
+    uint8_t kv_fill[64];
+    uint32_t i;
+    uint32_t id = 1u;
+    uint8_t state = 1u;
+
+    memset(kv_fill, 0xA5, sizeof(kv_fill));
+    ASSERT_EQ(microdb_schema_init(&s, "pre_rel_wc", 2u), MICRODB_OK);
+    ASSERT_EQ(microdb_schema_add(&s, "id", MICRODB_COL_U32, sizeof(uint32_t), true), MICRODB_OK);
+    ASSERT_EQ(microdb_schema_add(&s, "state", MICRODB_COL_U8, sizeof(uint8_t), false), MICRODB_OK);
+    ASSERT_EQ(microdb_schema_seal(&s), MICRODB_OK);
+    ASSERT_EQ(microdb_table_create(&g_db, &s), MICRODB_OK);
+    ASSERT_EQ(microdb_table_get(&g_db, "pre_rel_wc", &t), MICRODB_OK);
+    ASSERT_EQ(microdb_row_set(t, row, "id", &id), MICRODB_OK);
+    ASSERT_EQ(microdb_row_set(t, row, "state", &state), MICRODB_OK);
+    ASSERT_EQ(microdb_rel_insert(&g_db, t, row), MICRODB_OK);
+
+    memset(&a, 0, sizeof(a));
+    for (i = 0u; i < 512u; ++i) {
+        char key[6];
+        key[0] = 'w';
+        key[1] = (char)('0' + (char)((i / 1000u) % 10u));
+        key[2] = (char)('0' + (char)((i / 100u) % 10u));
+        key[3] = (char)('0' + (char)((i / 10u) % 10u));
+        key[4] = (char)('0' + (char)(i % 10u));
+        key[5] = '\0';
+        ASSERT_EQ(microdb_kv_set(&g_db, key, kv_fill, sizeof(kv_fill), 0u), MICRODB_OK);
+        ASSERT_EQ(microdb_admit_rel_insert(&g_db, "pre_rel_wc", microdb_table_row_size(t), &a), MICRODB_OK);
+        ASSERT_EQ(a.status, MICRODB_OK);
+        if (a.would_compact != 0u) {
+            break;
+        }
+    }
+
+    ASSERT_EQ(a.would_compact, 1u);
+    ASSERT_EQ(a.deterministic_budget_ok, 0u);
+}
+
 MDB_TEST(test_pressure_api) {
     microdb_pressure_t p;
     uint8_t value = 7u;
@@ -265,5 +322,6 @@ int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, test_pressure_api);
     MDB_RUN_TEST(setup_storage_db, teardown_storage_db, test_inspect_wal);
     MDB_RUN_TEST(setup_storage_db, teardown_storage_db, test_split_db_stats_storage_fields);
+    MDB_RUN_TEST(setup_storage_low_wal_threshold_db, teardown_storage_db, test_admission_rel_would_compact_clears_deterministic_budget);
     return MDB_RESULT();
 }

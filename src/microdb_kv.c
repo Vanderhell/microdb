@@ -79,16 +79,7 @@ static bool microdb_kv_expired(const microdb_core_t *core, const microdb_kv_buck
 }
 
 static uint32_t microdb_kv_live_value_bytes(const microdb_core_t *core) {
-    uint32_t i;
-    uint32_t total = 0u;
-
-    for (i = 0; i < core->kv.bucket_count; ++i) {
-        if (core->kv.buckets[i].state == MICRODB_KV_BUCKET_LIVE) {
-            total += core->kv.buckets[i].val_len;
-        }
-    }
-
-    return total;
+    return core->kv.live_value_bytes;
 }
 
 static uint32_t microdb_kv_fragmented_bytes(const microdb_core_t *core) {
@@ -141,8 +132,9 @@ static microdb_err_t microdb_kv_find_slot(microdb_core_t *core,
                                           uint32_t *slot_out,
                                           bool *found_out,
                                           uint32_t *probe_collisions_out) {
+    uint32_t search_hash = microdb_kv_hash(key);
     uint32_t mask = core->kv.bucket_count - 1u;
-    uint32_t idx = microdb_kv_hash(key) & mask;
+    uint32_t idx = search_hash & mask;
     uint32_t tombstone = UINT32_MAX;
     uint32_t probed;
     uint32_t probe_collisions = 0u;
@@ -160,7 +152,8 @@ static microdb_err_t microdb_kv_find_slot(microdb_core_t *core,
             if (tombstone == UINT32_MAX) {
                 tombstone = idx;
             }
-        } else if (strncmp(bucket->key, key, MICRODB_KV_KEY_MAX_LEN) == 0) {
+        } else if (bucket->key_hash == search_hash &&
+                   strncmp(bucket->key, key, MICRODB_KV_KEY_MAX_LEN) == 0) {
             *slot_out = idx;
             *found_out = true;
             if (probe_collisions_out != NULL) {
@@ -213,10 +206,12 @@ static void microdb_kv_remove_slot(microdb_core_t *core, uint32_t idx) {
     microdb_kv_bucket_t *bucket = &core->kv.buckets[idx];
 
     if (bucket->state == MICRODB_KV_BUCKET_LIVE && core->kv.entry_count != 0u) {
+        core->kv.live_value_bytes -= bucket->val_len;
         core->kv.entry_count--;
     }
 
     bucket->state = MICRODB_KV_BUCKET_TOMBSTONE;
+    bucket->key_hash = 0u;
     bucket->key[0] = '\0';
     bucket->val_offset = 0u;
     bucket->val_len = 0u;
@@ -265,6 +260,8 @@ static microdb_err_t microdb_kv_overwrite_value(microdb_core_t *core,
         microdb_kv_shift_offsets(core, old_offset, -((int32_t)(old_len - len)));
         core->kv.value_used -= (old_len - (uint32_t)len);
         bucket->val_len = (uint32_t)len;
+        core->kv.live_value_bytes -= old_len;
+        core->kv.live_value_bytes += (uint32_t)len;
         return MICRODB_OK;
     }
 
@@ -281,6 +278,8 @@ static microdb_err_t microdb_kv_overwrite_value(microdb_core_t *core,
     core->kv.value_used += (uint32_t)(len - old_len);
     microdb_kv_write_bytes(&core->kv.value_store[old_offset], val, len);
     bucket->val_len = (uint32_t)len;
+    core->kv.live_value_bytes -= old_len;
+    core->kv.live_value_bytes += (uint32_t)len;
     return MICRODB_OK;
 }
 
@@ -300,6 +299,7 @@ static microdb_err_t microdb_kv_append_value(microdb_core_t *core,
     bucket->val_offset = core->kv.value_used;
     bucket->val_len = (uint32_t)len;
     core->kv.value_used += (uint32_t)len;
+    core->kv.live_value_bytes += (uint32_t)len;
     return MICRODB_OK;
 }
 
@@ -370,6 +370,7 @@ microdb_err_t microdb_kv_init(microdb_t *db) {
         return MICRODB_ERR_NO_MEM;
     }
     core->kv.access_clock = 1u;
+    core->kv.live_value_bytes = 0u;
 #endif
 
     return MICRODB_OK;
@@ -447,6 +448,7 @@ static microdb_err_t microdb_kv_set_at_internal(microdb_t *db,
     }
 
     bucket->state = MICRODB_KV_BUCKET_LIVE;
+    bucket->key_hash = microdb_kv_hash(key);
     memcpy(bucket->key, key, strlen(key) + 1u);
     bucket->expires_at = expires_at;
     bucket->last_access = microdb_kv_next_access_clock(core);
@@ -840,6 +842,7 @@ microdb_err_t microdb_kv_clear(microdb_t *db) {
     memset(core->kv.buckets, 0, bucket_bytes);
     core->kv.entry_count = 0u;
     core->kv.value_used = 0u;
+    core->kv.live_value_bytes = 0u;
     core->kv.access_clock = 1u;
     core->live_bytes = microdb_kv_live_bytes(db);
     if (!(core->wal_enabled && core->storage != NULL && !core->storage_loading && !core->wal_replaying)) {

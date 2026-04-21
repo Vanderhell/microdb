@@ -331,9 +331,10 @@ MDB_TEST(ts_drop_oldest_when_ring_buffer_full) {
     uint32_t value;
     microdb_ts_sample_t last;
     ts_collect_ctx_t ctx;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "drop", MICRODB_TS_U32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity + 1u; ++i) {
         value = i;
         ASSERT_EQ(microdb_ts_insert(&g_db, "drop", i, &value), MICRODB_OK);

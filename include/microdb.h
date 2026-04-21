@@ -431,6 +431,9 @@ typedef struct {
     void *ctx;
 } microdb_storage_t;
 
+#define MICRODB_WAL_SYNC_ALWAYS 0u
+#define MICRODB_WAL_SYNC_FLUSH_ONLY 1u
+
 typedef struct {
     microdb_storage_t *storage;
     uint32_t ram_kb;
@@ -444,6 +447,7 @@ typedef struct {
     void (*lock_destroy)(void *hdl);
     uint8_t wal_compact_auto;
     uint8_t wal_compact_threshold_pct;
+    uint8_t wal_sync_mode;
     microdb_err_t (*on_migrate)(microdb_t *db, const char *table_name, uint16_t old_version, uint16_t new_version);
 } microdb_cfg_t;
 

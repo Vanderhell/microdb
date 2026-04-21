@@ -410,6 +410,10 @@ static uint32_t microdb_ts_stream_val_size(const microdb_ts_stream_t *stream) {
     return (stream->type == MICRODB_TS_RAW) ? (uint32_t)stream->raw_size : 4u;
 }
 
+static const uint8_t *microdb_ts_sample_ptr_const(const microdb_ts_stream_t *stream, uint32_t idx) {
+    return stream->buf + (idx * stream->sample_stride);
+}
+
 static microdb_err_t microdb_write_ts_page(microdb_core_t *core, uint32_t bank, uint32_t generation) {
     uint32_t stream_count = 0u;
     uint32_t page_offset = microdb_bank_ts_offset(core, bank);
@@ -476,11 +480,17 @@ static microdb_err_t microdb_write_ts_page(microdb_core_t *core, uint32_t bank, 
 
         idx = stream->tail;
         for (j = 0u; j < stream->count; ++j) {
-            const microdb_ts_sample_t *sample = &stream->buf[idx];
-            uint64_t ts = (uint64_t)sample->ts;
-            uint32_t ts_low = (uint32_t)(ts & 0xFFFFFFFFu);
-            uint32_t ts_high = (uint32_t)(ts >> 32u);
+            const uint8_t *sample_ptr = microdb_ts_sample_ptr_const(stream, idx);
+            microdb_timestamp_t sample_ts = 0;
             uint32_t val_len = microdb_ts_stream_val_size(stream);
+            uint64_t ts;
+            uint32_t ts_low;
+            uint32_t ts_high;
+
+            memcpy(&sample_ts, sample_ptr, sizeof(sample_ts));
+            ts = (uint64_t)sample_ts;
+            ts_low = (uint32_t)(ts & 0xFFFFFFFFu);
+            ts_high = (uint32_t)(ts >> 32u);
 
             if (offset + 8u + val_len > max_end) {
                 return MICRODB_ERR_STORAGE;
@@ -501,11 +511,11 @@ static microdb_err_t microdb_write_ts_page(microdb_core_t *core, uint32_t bank, 
             crc = microdb_crc32(crc, u32buf, 4u);
             offset += 4u;
 
-            err = microdb_storage_write_bytes(core, offset, &sample->v, val_len);
+            err = microdb_storage_write_bytes(core, offset, sample_ptr + sizeof(sample_ts), val_len);
             if (err != MICRODB_OK) {
                 return err;
             }
-            crc = microdb_crc32(crc, &sample->v, val_len);
+            crc = microdb_crc32(crc, sample_ptr + sizeof(sample_ts), val_len);
             offset += val_len;
             idx = (idx + 1u) % stream->capacity;
         }
@@ -1885,13 +1895,12 @@ static microdb_err_t microdb_append_wal_entry(microdb_t *db,
     microdb_core_t *core = microdb_core(db);
     uint32_t aligned_len = microdb_align_u32(payload_len, 4u);
     uint32_t entry_len = 16u + aligned_len;
-    uint8_t entry[1552];
+    uint32_t offset = 0u;
+    uint32_t pad_len = aligned_len - payload_len;
+    uint8_t header[16];
+    uint8_t pad[4] = { 0u, 0u, 0u, 0u };
     uint32_t crc;
     microdb_err_t err;
-
-    if (entry_len > sizeof(entry)) {
-        return MICRODB_ERR_STORAGE;
-    }
 
     if (core->wal_used + entry_len > core->layout.wal_size) {
         err = microdb_storage_flush(db);
@@ -1904,22 +1913,38 @@ static microdb_err_t microdb_append_wal_entry(microdb_t *db,
         return MICRODB_ERR_STORAGE;
     }
 
-    memset(entry, 0, sizeof(entry));
-    microdb_put_u32(entry + 0u, MICRODB_WAL_ENTRY_MAGIC);
-    microdb_put_u32(entry + 4u, core->wal_entry_count + 1u);
-    entry[8] = engine;
-    entry[9] = op;
-    microdb_put_u16(entry + 10u, payload_len);
+    memset(header, 0, sizeof(header));
+    microdb_put_u32(header + 0u, MICRODB_WAL_ENTRY_MAGIC);
+    microdb_put_u32(header + 4u, core->wal_entry_count + 1u);
+    header[8] = engine;
+    header[9] = op;
+    microdb_put_u16(header + 10u, payload_len);
+    crc = MICRODB_CRC32(header, 12u);
     if (payload_len != 0u) {
-        memcpy(entry + 16u, payload, payload_len);
+        crc = microdb_crc32(crc, payload, payload_len);
     }
-    crc = MICRODB_CRC32(entry, 12u);
-    crc = microdb_crc32(crc, entry + 16u, payload_len);
-    microdb_put_u32(entry + 12u, crc);
+    microdb_put_u32(header + 12u, crc);
 
-    err = microdb_storage_write_bytes(core, core->layout.wal_offset + core->wal_used, entry, entry_len);
+    offset = core->layout.wal_offset + core->wal_used;
+    err = microdb_storage_write_bytes(core, offset, header, sizeof(header));
     if (err != MICRODB_OK) {
         return err;
+    }
+    offset += (uint32_t)sizeof(header);
+
+    if (payload_len != 0u) {
+        err = microdb_storage_write_bytes(core, offset, payload, payload_len);
+        if (err != MICRODB_OK) {
+            return err;
+        }
+        offset += payload_len;
+    }
+
+    if (pad_len != 0u) {
+        err = microdb_storage_write_bytes(core, offset, pad, pad_len);
+        if (err != MICRODB_OK) {
+            return err;
+        }
     }
 
     core->wal_used += entry_len;
@@ -1928,9 +1953,11 @@ static microdb_err_t microdb_append_wal_entry(microdb_t *db,
     if (err != MICRODB_OK) {
         return err;
     }
-    err = microdb_storage_sync_core(core);
-    if (err != MICRODB_OK) {
-        return err;
+    if (core->wal_sync_mode == MICRODB_WAL_SYNC_ALWAYS) {
+        err = microdb_storage_sync_core(core);
+        if (err != MICRODB_OK) {
+            return err;
+        }
     }
 
     return MICRODB_OK;

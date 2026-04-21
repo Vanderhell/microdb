@@ -216,6 +216,9 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
         (cfg->wal_compact_threshold_pct == 0u || cfg->wal_compact_threshold_pct > 100u)) {
         return MICRODB_ERR_INVALID;
     }
+    if (cfg->wal_sync_mode > MICRODB_WAL_SYNC_FLUSH_ONLY) {
+        return MICRODB_ERR_INVALID;
+    }
     total_bytes = microdb_bytes_from_kb(ram_kb);
 
     core->heap = (uint8_t *)malloc(total_bytes);
@@ -240,6 +243,7 @@ microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg) {
     }
     core->wal_compact_auto = cfg->wal_compact_auto;
     core->wal_compact_threshold_pct = cfg->wal_compact_threshold_pct;
+    core->wal_sync_mode = cfg->wal_sync_mode;
     core->on_migrate = cfg->on_migrate;
     core->last_runtime_error = MICRODB_OK;
     core->last_recovery_status = MICRODB_OK;
@@ -1020,7 +1024,9 @@ microdb_err_t microdb_admit_rel_insert(microdb_t *db, const char *table_name, si
         }
     }
 
-    if (out->deterministic_budget_ok == 0u && out->would_degrade == 0u) {
+    if (out->would_compact != 0u) {
+        out->deterministic_budget_ok = 0u;
+    } else if (out->deterministic_budget_ok == 0u && out->would_degrade == 0u) {
         out->deterministic_budget_ok = 1u;
     }
     out->status = MICRODB_OK;

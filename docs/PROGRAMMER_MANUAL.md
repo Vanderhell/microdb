@@ -154,6 +154,7 @@ If none is selected, `MICRODB_PROFILE_CORE_WAL` is used by default.
 - `kv_pct`, `ts_pct`, `rel_pct`: runtime split override
 - `lock_create/lock/unlock/lock_destroy`: lock hooks
 - `wal_compact_auto`, `wal_compact_threshold_pct`: compaction behavior knobs
+- `wal_sync_mode`: WAL sync policy (`MICRODB_WAL_SYNC_ALWAYS` default, `MICRODB_WAL_SYNC_FLUSH_ONLY` opt-in)
 - `on_migrate`: schema migration callback
 
 ## 5.3 Storage contract (strict)
@@ -326,6 +327,19 @@ typedef bool (*microdb_ts_query_cb_t)(const microdb_ts_sample_t *sample, void *c
 - `microdb_ts_count(db, name, from, to, out_count)`
 - `microdb_ts_clear(db, name)`
 
+### TS query callback mutation contract
+
+`microdb_ts_query` intentionally unlocks before invoking your callback and re-locks after callback return.
+
+- If callback (or another thread/task) mutates TS state during the query window, `mutation_seq` changes.
+- When that happens, `microdb_ts_query` returns `MICRODB_ERR_INVALID`.
+- Treat this return value as "iteration snapshot invalidated by concurrent mutation", not as storage corruption.
+
+Safe caller pattern:
+
+- do read-only work in callback, or
+- if mutation is needed, stop callback (`return false`), then do write in a separate step, then re-run query.
+
 ### TS usage example
 
 ```c
@@ -368,6 +382,18 @@ typedef bool (*microdb_rel_iter_cb_t)(const void *row_buf, void *ctx);
 - `microdb_rel_iter(db, table, cb, ctx)`
 - `microdb_rel_count(table, out_count)`
 - `microdb_rel_clear(db, table)`
+
+### REL find callback lock and mutation contract
+
+`microdb_rel_find` also unlocks around callback invocation and validates table mutation sequence on re-lock.
+
+- If rows are inserted/deleted/cleared while `microdb_rel_find` callback is in progress, table `mutation_seq` changes.
+- If `mutation_seq` changed, `microdb_rel_find` returns `MICRODB_ERR_INVALID`.
+- For caller logic, this means "search result traversal was invalidated", so restart the query under your chosen retry policy.
+
+Practical rule:
+
+- Do not call mutating REL APIs (`rel_insert`, `rel_delete`, `rel_clear`, schema/table create) from inside `rel_find` callback for the same table if you need deterministic traversal.
 
 ### REL usage example
 
@@ -553,6 +579,7 @@ These are operational wrappers for validation/verification, not replacements for
 
 - POSIX simulation and persistence example:
   - `examples/posix_simulator/main.c`
+  - `examples/posix_simulator/README.md`
 - ESP32 sensor-node style example:
   - `examples/esp32_sensor_node/main.c`
 
@@ -582,6 +609,21 @@ Choose variant by product constraints:
 4. Add `flush()` at explicit durability checkpoints.
 5. Schedule `compact()` in maintenance windows, not latency-critical code paths.
 6. Validate reopen/recovery behavior on real target media.
+
+## 13.1 Migration callback contract (`on_migrate`)
+
+`on_migrate` is called when `microdb_table_create` sees an existing table with the same name but different schema version.
+
+- Callback is invoked outside the internal DB lock.
+- `migration_in_progress` guard is active during callback; recursive migration via nested `microdb_table_create` is rejected with `MICRODB_ERR_SCHEMA`.
+- If callback returns non-`MICRODB_OK`, that error is propagated to caller and schema version is not advanced.
+- If callback returns `MICRODB_OK`, caller is responsible for data transformation correctness done inside callback before version bump completes.
+
+Recommended callback behavior:
+
+- Keep migration idempotent.
+- Prefer explicit read/transform/write sequence with clear fail path.
+- Avoid creating additional schema-version transitions inside callback.
 
 ## 14. Related documents
 

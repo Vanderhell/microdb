@@ -32,9 +32,10 @@ static void teardown_db(void) {
 MDB_TEST(ts_reject_policy_returns_full_when_buffer_full) {
     uint32_t i;
     uint32_t value;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "reject", MICRODB_TS_U32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity; ++i) {
         value = i;
         ASSERT_EQ(microdb_ts_insert(&g_db, "reject", i, &value), MICRODB_OK);
@@ -47,9 +48,10 @@ MDB_TEST(ts_reject_policy_preserves_oldest_data) {
     uint32_t i;
     uint32_t value;
     microdb_ts_sample_t sample;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "reject", MICRODB_TS_U32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity; ++i) {
         value = i;
         ASSERT_EQ(microdb_ts_insert(&g_db, "reject", i, &value), MICRODB_OK);
@@ -64,9 +66,10 @@ MDB_TEST(ts_reject_policy_count_stays_at_capacity) {
     uint32_t i;
     uint32_t value;
     size_t count = 0u;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "reject", MICRODB_TS_U32, 0u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity; ++i) {
         value = i;
         ASSERT_EQ(microdb_ts_insert(&g_db, "reject", i, &value), MICRODB_OK);
@@ -80,9 +83,10 @@ MDB_TEST(ts_reject_policy_count_stays_at_capacity) {
 MDB_TEST(ts_reject_policy_raw_full_returns_full) {
     uint8_t raw[3] = { 1u, 2u, 3u };
     uint32_t i;
-    uint32_t capacity = test_core()->ts.streams[0].capacity;
+    uint32_t capacity;
 
     ASSERT_EQ(microdb_ts_register(&g_db, "raw", MICRODB_TS_RAW, 3u), MICRODB_OK);
+    capacity = test_core()->ts.streams[0].capacity;
     for (i = 0; i < capacity; ++i) {
         ASSERT_EQ(microdb_ts_insert(&g_db, "raw", i, raw), MICRODB_OK);
     }

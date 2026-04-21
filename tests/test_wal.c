@@ -11,6 +11,8 @@ static microdb_t g_db;
 static microdb_storage_t g_storage;
 static const char *g_path = "wal_test.bin";
 static uint32_t g_now = 1000u;
+static uint32_t g_sync_calls = 0u;
+static microdb_err_t (*g_sync_prev)(void *ctx) = NULL;
 
 typedef struct {
     uint32_t count;
@@ -19,6 +21,14 @@ typedef struct {
 
 static microdb_timestamp_t mock_now(void) {
     return g_now;
+}
+
+static microdb_err_t counting_sync(void *ctx) {
+    g_sync_calls++;
+    if (g_sync_prev != NULL) {
+        return g_sync_prev(ctx);
+    }
+    return MICRODB_OK;
 }
 
 static void cleanup_handles(microdb_t *db, microdb_storage_t *storage) {
@@ -35,7 +45,7 @@ static void crash_drop_db_heap(microdb_t *db) {
     memset(db, 0, sizeof(*db));
 }
 
-static void open_db(microdb_t *db, microdb_storage_t *storage) {
+static void open_db_with_sync_mode(microdb_t *db, microdb_storage_t *storage, uint8_t wal_sync_mode) {
     microdb_cfg_t cfg;
 
     memset(db, 0, sizeof(*db));
@@ -46,7 +56,12 @@ static void open_db(microdb_t *db, microdb_storage_t *storage) {
     cfg.storage = storage;
     cfg.ram_kb = 32u;
     cfg.now = mock_now;
+    cfg.wal_sync_mode = wal_sync_mode;
     ASSERT_EQ(microdb_init(db, &cfg), MICRODB_OK);
+}
+
+static void open_db(microdb_t *db, microdb_storage_t *storage) {
+    open_db_with_sync_mode(db, storage, MICRODB_WAL_SYNC_ALWAYS);
 }
 
 static void setup_db(void) {
@@ -121,6 +136,32 @@ MDB_TEST(wal_entry_written_after_kv_set) {
     ASSERT_EQ(read_u32(&g_storage, 8u), 1u);
     ASSERT_EQ(read_u32(&g_storage, 32u), 0x454E5452u);
     ASSERT_EQ(read_u8(&g_storage, 40u), 0u);
+}
+
+MDB_TEST(wal_sync_mode_controls_per_entry_sync) {
+    uint8_t value = 0x5Au;
+    uint32_t sync_before;
+
+    cleanup_handles(&g_db, &g_storage);
+    microdb_port_posix_remove(g_path);
+
+    open_db_with_sync_mode(&g_db, &g_storage, MICRODB_WAL_SYNC_ALWAYS);
+    g_sync_prev = g_storage.sync;
+    g_storage.sync = counting_sync;
+    g_sync_calls = 0u;
+    ASSERT_EQ(microdb_kv_set(&g_db, "sync_always", &value, 1u, 0u), MICRODB_OK);
+    ASSERT_EQ(g_sync_calls > 0u, 1);
+    cleanup_handles(&g_db, &g_storage);
+
+    open_db_with_sync_mode(&g_db, &g_storage, MICRODB_WAL_SYNC_FLUSH_ONLY);
+    g_sync_prev = g_storage.sync;
+    g_storage.sync = counting_sync;
+    g_sync_calls = 0u;
+    ASSERT_EQ(microdb_kv_set(&g_db, "sync_flush_only", &value, 1u, 0u), MICRODB_OK);
+    ASSERT_EQ(g_sync_calls, 0u);
+    sync_before = g_sync_calls;
+    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
+    ASSERT_EQ(g_sync_calls > sync_before, 1);
 }
 
 MDB_TEST(wal_entry_written_after_ts_insert) {
@@ -509,6 +550,7 @@ MDB_TEST(wal_rel_iter_persists_insertion_order_after_reload) {
 
 int main(void) {
     MDB_RUN_TEST(setup_db, teardown_db, wal_entry_written_after_kv_set);
+    MDB_RUN_TEST(setup_db, teardown_db, wal_sync_mode_controls_per_entry_sync);
     MDB_RUN_TEST(setup_db, teardown_db, wal_entry_written_after_ts_insert);
     MDB_RUN_TEST(setup_db, teardown_db, wal_entry_written_after_rel_insert);
     MDB_RUN_TEST(setup_db, teardown_db, wal_power_loss_after_kv_set_replays);
