@@ -5,6 +5,7 @@
 #include "esp_heap_caps.h"
 #endif
 
+#define MICRODB_PROFILE_CORE_HIMEM 1
 extern "C" {
 #include "microdb.h"
 }
@@ -174,6 +175,7 @@ static microdb_err_t db_open(bool wipe, bool with_mig) {
   cfg.rel_pct = P()->rel_pct;
   cfg.wal_compact_auto = 0u;
   cfg.wal_compact_threshold_pct = P()->wal_threshold_pct;
+  cfg.wal_sync_mode = MICRODB_WAL_SYNC_FLUSH_ONLY;
   cfg.on_migrate = with_mig ? on_migrate : NULL;
   return microdb_init(&g_db, &cfg);
 }
@@ -646,6 +648,10 @@ static bool run_wal_compact_bench(void) {
   if (microdb_inspect(&g_db, &start) != MICRODB_OK) return false;
   MDB_CONSOLE.printf("[WAL] baseline before warmup: used=%lu total=%lu fill=%u%%\n", (unsigned long)start.wal_bytes_used,
                      (unsigned long)start.wal_bytes_total, (unsigned)start.wal_fill_pct);
+  if (start.kv_entries_max > 2u && key_span >= (start.kv_entries_max - 1u)) {
+    key_span = start.kv_entries_max - 2u;
+    MDB_CONSOLE.printf("[WAL] key_span adjusted to %lu to keep probe key resident.\n", (unsigned long)key_span);
+  }
   if (start.wal_fill_pct > 5u) {
     MDB_CONSOLE.println("[WAL][WARN] baseline fill is not near-empty before warmup.");
   }

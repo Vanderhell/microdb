@@ -14,6 +14,7 @@ typedef struct {
 
 typedef struct {
     uint8_t state;
+    uint32_t key_hash;
     char key[MICRODB_KV_KEY_MAX_LEN];
     uint32_t val_offset;
     uint32_t val_len;
@@ -30,6 +31,7 @@ typedef struct {
     uint8_t *value_store;
     uint32_t value_capacity;
     uint32_t value_used;
+    uint32_t live_value_bytes;
     uint32_t access_clock;
 } microdb_kv_state_t;
 
@@ -37,6 +39,7 @@ typedef struct {
     char key[MICRODB_KV_KEY_MAX_LEN];
     void *val_ptr;
     size_t val_len;
+    uint32_t expires_at;
     uint8_t op;
     uint8_t val_buf[MICRODB_KV_VAL_MAX_LEN];
 } microdb_txn_stage_entry_t;
@@ -45,17 +48,19 @@ typedef struct {
     char name[MICRODB_TS_STREAM_NAME_LEN];
     microdb_ts_type_t type;
     size_t raw_size;
+    uint32_t sample_stride;
     uint32_t head;
     uint32_t tail;
     uint32_t count;
     uint32_t capacity;
-    microdb_ts_sample_t *buf;
+    uint8_t *buf;
     bool registered;
 } microdb_ts_stream_t;
 
 typedef struct {
     microdb_ts_stream_t streams[MICRODB_TS_MAX_STREAMS];
     uint32_t registered_streams;
+    uint32_t mutation_seq;
 } microdb_ts_state_t;
 
 typedef struct {
@@ -87,6 +92,7 @@ struct microdb_table_s {
     uint32_t live_count;
     uint32_t index_count;
     uint32_t order_count;
+    uint32_t mutation_seq;
     bool registered;
 };
 
@@ -124,6 +130,11 @@ typedef struct {
     void (*lock_destroy)(void *hdl);
     void *lock_handle;
     uint32_t storage_bytes_written;
+    uint32_t compact_count;
+    uint32_t reopen_count;
+    uint32_t recovery_count;
+    microdb_err_t last_runtime_error;
+    microdb_err_t last_recovery_status;
     bool wal_enabled;
     microdb_arena_t arena;
     microdb_arena_t kv_arena;
@@ -141,9 +152,12 @@ typedef struct {
     uint32_t wal_used;
     uint8_t wal_compact_auto;
     uint8_t wal_compact_threshold_pct;
+    uint8_t wal_sync_mode;
     microdb_err_t (*on_migrate)(microdb_t *db, const char *table_name, uint16_t old_version, uint16_t new_version);
     bool storage_loading;
     bool wal_replaying;
+    uint32_t ts_dropped_samples;
+    bool migration_in_progress;
 } microdb_core_t;
 
 typedef struct {
@@ -200,6 +214,12 @@ static inline void microdb__maybe_compact(microdb_t *db) {
     threshold = (core->wal_compact_threshold_pct != 0u) ? core->wal_compact_threshold_pct : 75u;
     if (wal_fill_pct >= threshold) {
         (void)microdb_storage_flush(db);
+    }
+}
+
+static inline void microdb_record_error(microdb_core_t *core, microdb_err_t err) {
+    if (core != NULL && err != MICRODB_OK) {
+        core->last_runtime_error = err;
     }
 }
 

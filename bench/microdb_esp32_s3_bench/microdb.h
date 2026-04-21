@@ -6,6 +6,118 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef MICRODB_PROFILE_CORE_HIMEM
+#define MICRODB_PROFILE_CORE_HIMEM 1
+#endif
+
+#ifndef MICRODB_PROFILE_CORE_MIN
+#define MICRODB_PROFILE_CORE_MIN 0
+#endif
+#ifndef MICRODB_PROFILE_CORE_WAL
+#define MICRODB_PROFILE_CORE_WAL 0
+#endif
+#ifndef MICRODB_PROFILE_CORE_PERF
+#define MICRODB_PROFILE_CORE_PERF 0
+#endif
+#ifndef MICRODB_PROFILE_CORE_HIMEM
+#define MICRODB_PROFILE_CORE_HIMEM 0
+#endif
+#ifndef MICRODB_PROFILE_FOOTPRINT_MIN
+#define MICRODB_PROFILE_FOOTPRINT_MIN 0
+#endif
+
+#if (MICRODB_PROFILE_CORE_MIN + MICRODB_PROFILE_CORE_WAL + MICRODB_PROFILE_CORE_PERF + MICRODB_PROFILE_CORE_HIMEM + MICRODB_PROFILE_FOOTPRINT_MIN) > 1
+#error "Only one MICRODB_PROFILE_* profile may be enabled"
+#endif
+#if (MICRODB_PROFILE_CORE_MIN + MICRODB_PROFILE_CORE_WAL + MICRODB_PROFILE_CORE_PERF + MICRODB_PROFILE_CORE_HIMEM + MICRODB_PROFILE_FOOTPRINT_MIN) == 0
+#undef MICRODB_PROFILE_CORE_WAL
+#define MICRODB_PROFILE_CORE_WAL 1
+#endif
+
+#if MICRODB_PROFILE_FOOTPRINT_MIN
+#ifndef MICRODB_RAM_KB
+#define MICRODB_RAM_KB 8u
+#endif
+#ifndef MICRODB_ENABLE_KV
+#define MICRODB_ENABLE_KV 1
+#endif
+#ifndef MICRODB_ENABLE_TS
+#define MICRODB_ENABLE_TS 0
+#endif
+#ifndef MICRODB_ENABLE_REL
+#define MICRODB_ENABLE_REL 0
+#endif
+#ifndef MICRODB_ENABLE_WAL
+#define MICRODB_ENABLE_WAL 1
+#endif
+#ifndef MICRODB_KV_MAX_KEYS
+#define MICRODB_KV_MAX_KEYS 16u
+#endif
+#ifndef MICRODB_TXN_STAGE_KEYS
+#define MICRODB_TXN_STAGE_KEYS 2u
+#endif
+#ifndef MICRODB_KV_KEY_MAX_LEN
+#define MICRODB_KV_KEY_MAX_LEN 16u
+#endif
+#ifndef MICRODB_KV_VAL_MAX_LEN
+#define MICRODB_KV_VAL_MAX_LEN 64u
+#endif
+#ifndef MICRODB_TS_MAX_STREAMS
+#define MICRODB_TS_MAX_STREAMS 1u
+#endif
+#ifndef MICRODB_REL_MAX_TABLES
+#define MICRODB_REL_MAX_TABLES 1u
+#endif
+#ifndef MICRODB_REL_MAX_COLS
+#define MICRODB_REL_MAX_COLS 1u
+#endif
+#endif
+
+#if MICRODB_PROFILE_CORE_MIN
+#ifndef MICRODB_RAM_KB
+#define MICRODB_RAM_KB 32u
+#endif
+#ifndef MICRODB_KV_MAX_KEYS
+#define MICRODB_KV_MAX_KEYS 48u
+#endif
+#ifndef MICRODB_TS_MAX_STREAMS
+#define MICRODB_TS_MAX_STREAMS 4u
+#endif
+#ifndef MICRODB_REL_MAX_TABLES
+#define MICRODB_REL_MAX_TABLES 2u
+#endif
+#ifndef MICRODB_REL_MAX_COLS
+#define MICRODB_REL_MAX_COLS 8u
+#endif
+#endif
+
+#if MICRODB_PROFILE_CORE_WAL
+#ifndef MICRODB_RAM_KB
+#define MICRODB_RAM_KB 32u
+#endif
+#ifndef MICRODB_KV_MAX_KEYS
+#define MICRODB_KV_MAX_KEYS 64u
+#endif
+#endif
+
+#if MICRODB_PROFILE_CORE_PERF
+#ifndef MICRODB_RAM_KB
+#define MICRODB_RAM_KB 64u
+#endif
+#ifndef MICRODB_KV_MAX_KEYS
+#define MICRODB_KV_MAX_KEYS 128u
+#endif
+#endif
+
+#if MICRODB_PROFILE_CORE_HIMEM
+#ifndef MICRODB_RAM_KB
+#define MICRODB_RAM_KB 128u
+#endif
+#ifndef MICRODB_KV_MAX_KEYS
+#define MICRODB_KV_MAX_KEYS 256u
+#endif
+#endif
+
 #ifndef MICRODB_RAM_KB
 #define MICRODB_RAM_KB 32u
 #endif
@@ -28,7 +140,7 @@
 #define MICRODB_RAM_REL_PCT 20u
 #endif
 #ifndef MICRODB_KV_MAX_KEYS
-#define MICRODB_KV_MAX_KEYS 384u
+#define MICRODB_KV_MAX_KEYS 64u
 #endif
 #ifndef MICRODB_KV_KEY_MAX_LEN
 #define MICRODB_KV_KEY_MAX_LEN 32u
@@ -101,6 +213,34 @@
 #define MICRODB_LOG(level, fmt, ...) ((void)0)
 #endif
 
+/* Optional platform I/O hooks for aligned/DMA-friendly integrations.
+ * Hooks must not change persistence semantics; defaults are strict no-op.
+ */
+#ifndef MICRODB_IO_BEFORE_READ
+#define MICRODB_IO_BEFORE_READ(offset, len) ((void)(offset), (void)(len))
+#endif
+#ifndef MICRODB_IO_AFTER_READ
+#define MICRODB_IO_AFTER_READ(offset, len, rc) ((void)(offset), (void)(len), (void)(rc))
+#endif
+#ifndef MICRODB_IO_BEFORE_WRITE
+#define MICRODB_IO_BEFORE_WRITE(offset, len) ((void)(offset), (void)(len))
+#endif
+#ifndef MICRODB_IO_AFTER_WRITE
+#define MICRODB_IO_AFTER_WRITE(offset, len, rc) ((void)(offset), (void)(len), (void)(rc))
+#endif
+#ifndef MICRODB_IO_BEFORE_ERASE
+#define MICRODB_IO_BEFORE_ERASE(offset, len) ((void)(offset), (void)(len))
+#endif
+#ifndef MICRODB_IO_AFTER_ERASE
+#define MICRODB_IO_AFTER_ERASE(offset, len, rc) ((void)(offset), (void)(len), (void)(rc))
+#endif
+#ifndef MICRODB_IO_BEFORE_SYNC
+#define MICRODB_IO_BEFORE_SYNC() ((void)0)
+#endif
+#ifndef MICRODB_IO_AFTER_SYNC
+#define MICRODB_IO_AFTER_SYNC(rc) ((void)(rc))
+#endif
+
 #define MICRODB_STATIC_ASSERT(name, expr) typedef char microdb_static_assert_##name[(expr) ? 1 : -1]
 
 MICRODB_STATIC_ASSERT(ram_pct_sum, (MICRODB_RAM_KV_PCT + MICRODB_RAM_TS_PCT + MICRODB_RAM_REL_PCT) == 100u);
@@ -126,6 +266,7 @@ typedef struct {
 
 typedef struct {
     uint16_t schema_version;
+    uintptr_t _align;
     uint8_t _opaque[MICRODB_SCHEMA_SIZE];
 } microdb_schema_t;
 
@@ -145,10 +286,17 @@ typedef enum {
     MICRODB_ERR_DISABLED = -10,
     MICRODB_ERR_OVERFLOW = -11,
     MICRODB_ERR_SCHEMA = -12,
-    MICRODB_ERR_TXN_ACTIVE = -13
+    MICRODB_ERR_TXN_ACTIVE = -13,
+    MICRODB_ERR_MODIFIED = -14
 } microdb_err_t;
 
+/* Returns a stable symbolic name for a microdb error code.
+ * Unknown values return "MICRODB_ERR_UNKNOWN".
+ */
+const char *microdb_err_to_string(microdb_err_t err);
+
 typedef struct {
+    /* Legacy aggregate stats (kept for backward compatibility). */
     uint32_t kv_entries_used;
     uint32_t kv_entries_max;
     uint8_t kv_fill_pct;
@@ -163,6 +311,91 @@ typedef struct {
     uint32_t rel_tables_count;
     uint32_t rel_rows_total;
 } microdb_stats_t;
+
+typedef struct {
+    uint32_t effective_capacity_bytes;
+    uint32_t wal_bytes_total;
+    uint32_t wal_bytes_used;
+    uint8_t wal_fill_pct;
+    /* Runtime-only counters; reset on each successful microdb_init. */
+    uint32_t compact_count;
+    uint32_t reopen_count;
+    uint32_t recovery_count;
+    /* Sticky last non-OK runtime operation status since init. */
+    microdb_err_t last_runtime_error;
+    /* Last status produced by open/recovery path in current process lifetime. */
+    microdb_err_t last_recovery_status;
+    uint32_t active_generation;
+    uint32_t active_bank;
+} microdb_db_stats_t;
+
+typedef struct {
+    uint32_t live_keys;
+    uint32_t collisions;
+    uint32_t evictions;
+    uint32_t tombstones;
+    uint32_t value_bytes_used;
+    uint8_t fill_pct;
+} microdb_kv_stats_t;
+
+typedef struct {
+    uint32_t stream_count;
+    uint32_t retained_samples;
+    uint32_t dropped_samples;
+    uint8_t fill_pct;
+} microdb_ts_stats_t;
+
+typedef struct {
+    uint32_t table_count;
+    uint32_t rows_live;
+    uint32_t rows_free;
+    uint32_t indexed_tables;
+    uint32_t index_entries;
+} microdb_rel_stats_t;
+
+typedef struct {
+    uint32_t kv_entries_usable;
+    uint32_t kv_entries_free;
+    uint32_t kv_value_bytes_usable;
+    uint32_t kv_value_bytes_free_now;
+    uint32_t ts_samples_usable;
+    uint32_t ts_samples_retained;
+    uint32_t ts_samples_free;
+    uint32_t wal_budget_total;
+    uint32_t wal_budget_used;
+    uint32_t wal_budget_free;
+    uint32_t wal_safety_reserved;
+    uint32_t compact_threshold_pct;
+    uint32_t limiting_flags;
+} microdb_effective_capacity_t;
+
+typedef struct {
+    uint8_t kv_fill_pct;
+    uint8_t ts_fill_pct;
+    uint8_t rel_fill_pct;
+    uint8_t wal_fill_pct;
+    uint8_t compact_pressure_pct;
+    uint8_t near_full_risk_pct;
+    uint32_t risk_flags;
+} microdb_pressure_t;
+
+#define MICRODB_CAP_LIMIT_NONE 0u
+#define MICRODB_CAP_LIMIT_KV_ENTRIES (1u << 0)
+#define MICRODB_CAP_LIMIT_KV_VALUE_BYTES (1u << 1)
+#define MICRODB_CAP_LIMIT_TS_SAMPLES (1u << 2)
+#define MICRODB_CAP_LIMIT_WAL_BUDGET (1u << 3)
+#define MICRODB_CAP_LIMIT_STORAGE_DISABLED (1u << 4)
+
+typedef struct {
+    microdb_err_t status;
+    uint8_t would_compact;
+    uint8_t would_degrade;
+    uint8_t deterministic_budget_ok;
+    uint32_t required_bytes;
+    uint32_t available_bytes;
+    uint32_t required_wal_bytes;
+    uint32_t wal_bytes_free;
+} microdb_admission_t;
 
 typedef enum {
     MICRODB_TS_F32 = 0,
@@ -193,10 +426,18 @@ typedef struct {
     microdb_err_t (*erase)(void *ctx, uint32_t offset);
     microdb_err_t (*sync)(void *ctx);
     uint32_t capacity;
+    /* Storage contract (validated at microdb_init):
+     * - erase_size must be > 0
+     * - write_size must be exactly 1 in current releases
+     *   (write_size > 1 is not yet supported and fails fast with MICRODB_ERR_INVALID)
+     */
     uint32_t erase_size;
     uint32_t write_size;
     void *ctx;
 } microdb_storage_t;
+
+#define MICRODB_WAL_SYNC_ALWAYS 0u
+#define MICRODB_WAL_SYNC_FLUSH_ONLY 1u
 
 typedef struct {
     microdb_storage_t *storage;
@@ -211,6 +452,7 @@ typedef struct {
     void (*lock_destroy)(void *hdl);
     uint8_t wal_compact_auto;
     uint8_t wal_compact_threshold_pct;
+    uint8_t wal_sync_mode;
     microdb_err_t (*on_migrate)(microdb_t *db, const char *table_name, uint16_t old_version, uint16_t new_version);
 } microdb_cfg_t;
 
@@ -224,12 +466,20 @@ typedef struct {
     } v;
 } microdb_ts_sample_t;
 
-const char *microdb_err_to_string(microdb_err_t err);
 microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg);
 microdb_err_t microdb_deinit(microdb_t *db);
 microdb_err_t microdb_flush(microdb_t *db);
 microdb_err_t microdb_stats(const microdb_t *db, microdb_stats_t *out);
 microdb_err_t microdb_inspect(microdb_t *db, microdb_stats_t *out);
+microdb_err_t microdb_get_db_stats(microdb_t *db, microdb_db_stats_t *out);
+microdb_err_t microdb_get_kv_stats(microdb_t *db, microdb_kv_stats_t *out);
+microdb_err_t microdb_get_ts_stats(microdb_t *db, microdb_ts_stats_t *out);
+microdb_err_t microdb_get_rel_stats(microdb_t *db, microdb_rel_stats_t *out);
+microdb_err_t microdb_get_effective_capacity(microdb_t *db, microdb_effective_capacity_t *out);
+microdb_err_t microdb_get_pressure(microdb_t *db, microdb_pressure_t *out);
+microdb_err_t microdb_admit_kv_set(microdb_t *db, const char *key, size_t val_len, microdb_admission_t *out);
+microdb_err_t microdb_admit_ts_insert(microdb_t *db, const char *stream_name, size_t sample_len, microdb_admission_t *out);
+microdb_err_t microdb_admit_rel_insert(microdb_t *db, const char *table_name, size_t row_len, microdb_admission_t *out);
 microdb_err_t microdb_compact(microdb_t *db);
 
 typedef bool (*microdb_kv_iter_cb_t)(const char *key, const void *val, size_t val_len, uint32_t ttl_remaining, void *ctx);

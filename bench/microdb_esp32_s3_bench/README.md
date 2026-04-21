@@ -140,7 +140,7 @@ Practical guidance:
 
 - `SYNC_FLUSH_ONLY` is usually the better fit for sensor/log ingestion workloads with frequent writes.
 - Call `microdb_flush()` at explicit durability boundaries (for example end of batch, periodic timer, before controlled shutdown/sleep).
-- Treat latency numbers as directional/board-specific; re-run on your target firmware + flash settings.
+- Treat latency numbers as directional and board-specific; re-run on your exact flash chip and partition layout (in practice, values can vary by about +/-20% across SPI flash vendors).
 
 ## Terminal Commands
 

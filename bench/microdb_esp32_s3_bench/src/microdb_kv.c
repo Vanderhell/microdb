@@ -79,16 +79,7 @@ static bool microdb_kv_expired(const microdb_core_t *core, const microdb_kv_buck
 }
 
 static uint32_t microdb_kv_live_value_bytes(const microdb_core_t *core) {
-    uint32_t i;
-    uint32_t total = 0u;
-
-    for (i = 0; i < core->kv.bucket_count; ++i) {
-        if (core->kv.buckets[i].state == MICRODB_KV_BUCKET_LIVE) {
-            total += core->kv.buckets[i].val_len;
-        }
-    }
-
-    return total;
+    return core->kv.live_value_bytes;
 }
 
 static uint32_t microdb_kv_fragmented_bytes(const microdb_core_t *core) {
@@ -136,11 +127,17 @@ static void microdb_kv_maybe_compact(microdb_core_t *core) {
     }
 }
 
-static microdb_err_t microdb_kv_find_slot(microdb_core_t *core, const char *key, uint32_t *slot_out, bool *found_out) {
+static microdb_err_t microdb_kv_find_slot(microdb_core_t *core,
+                                          const char *key,
+                                          uint32_t *slot_out,
+                                          bool *found_out,
+                                          uint32_t *probe_collisions_out) {
+    uint32_t search_hash = microdb_kv_hash(key);
     uint32_t mask = core->kv.bucket_count - 1u;
-    uint32_t idx = microdb_kv_hash(key) & mask;
+    uint32_t idx = search_hash & mask;
     uint32_t tombstone = UINT32_MAX;
     uint32_t probed;
+    uint32_t probe_collisions = 0u;
 
     for (probed = 0; probed < core->kv.bucket_count; ++probed) {
         microdb_kv_bucket_t *bucket = &core->kv.buckets[idx];
@@ -155,12 +152,16 @@ static microdb_err_t microdb_kv_find_slot(microdb_core_t *core, const char *key,
             if (tombstone == UINT32_MAX) {
                 tombstone = idx;
             }
-        } else if (strncmp(bucket->key, key, MICRODB_KV_KEY_MAX_LEN) == 0) {
+        } else if (bucket->key_hash == search_hash &&
+                   strncmp(bucket->key, key, MICRODB_KV_KEY_MAX_LEN) == 0) {
             *slot_out = idx;
             *found_out = true;
+            if (probe_collisions_out != NULL) {
+                *probe_collisions_out = probe_collisions;
+            }
             return MICRODB_OK;
         } else {
-            core->kv.collision_count++;
+            probe_collisions++;
         }
 
         idx = (idx + 1u) & mask;
@@ -169,20 +170,48 @@ static microdb_err_t microdb_kv_find_slot(microdb_core_t *core, const char *key,
     if (tombstone != UINT32_MAX) {
         *slot_out = tombstone;
         *found_out = false;
+        if (probe_collisions_out != NULL) {
+            *probe_collisions_out = probe_collisions;
+        }
         return MICRODB_OK;
     }
 
+    if (probe_collisions_out != NULL) {
+        *probe_collisions_out = probe_collisions;
+    }
     return MICRODB_ERR_FULL;
+}
+
+static void microdb_kv_normalize_access_clock(microdb_core_t *core) {
+    uint32_t i;
+
+    if (core->kv.access_clock != UINT32_MAX) {
+        return;
+    }
+    for (i = 0u; i < core->kv.bucket_count; ++i) {
+        microdb_kv_bucket_t *bucket = &core->kv.buckets[i];
+        if (bucket->state == MICRODB_KV_BUCKET_LIVE) {
+            bucket->last_access = 1u;
+        }
+    }
+    core->kv.access_clock = 2u;
+}
+
+static uint32_t microdb_kv_next_access_clock(microdb_core_t *core) {
+    microdb_kv_normalize_access_clock(core);
+    return core->kv.access_clock++;
 }
 
 static void microdb_kv_remove_slot(microdb_core_t *core, uint32_t idx) {
     microdb_kv_bucket_t *bucket = &core->kv.buckets[idx];
 
     if (bucket->state == MICRODB_KV_BUCKET_LIVE && core->kv.entry_count != 0u) {
+        core->kv.live_value_bytes -= bucket->val_len;
         core->kv.entry_count--;
     }
 
     bucket->state = MICRODB_KV_BUCKET_TOMBSTONE;
+    bucket->key_hash = 0u;
     bucket->key[0] = '\0';
     bucket->val_offset = 0u;
     bucket->val_len = 0u;
@@ -231,6 +260,8 @@ static microdb_err_t microdb_kv_overwrite_value(microdb_core_t *core,
         microdb_kv_shift_offsets(core, old_offset, -((int32_t)(old_len - len)));
         core->kv.value_used -= (old_len - (uint32_t)len);
         bucket->val_len = (uint32_t)len;
+        core->kv.live_value_bytes -= old_len;
+        core->kv.live_value_bytes += (uint32_t)len;
         return MICRODB_OK;
     }
 
@@ -247,6 +278,8 @@ static microdb_err_t microdb_kv_overwrite_value(microdb_core_t *core,
     core->kv.value_used += (uint32_t)(len - old_len);
     microdb_kv_write_bytes(&core->kv.value_store[old_offset], val, len);
     bucket->val_len = (uint32_t)len;
+    core->kv.live_value_bytes -= old_len;
+    core->kv.live_value_bytes += (uint32_t)len;
     return MICRODB_OK;
 }
 
@@ -266,6 +299,7 @@ static microdb_err_t microdb_kv_append_value(microdb_core_t *core,
     bucket->val_offset = core->kv.value_used;
     bucket->val_len = (uint32_t)len;
     core->kv.value_used += (uint32_t)len;
+    core->kv.live_value_bytes += (uint32_t)len;
     return MICRODB_OK;
 }
 
@@ -336,6 +370,7 @@ microdb_err_t microdb_kv_init(microdb_t *db) {
         return MICRODB_ERR_NO_MEM;
     }
     core->kv.access_clock = 1u;
+    core->kv.live_value_bytes = 0u;
 #endif
 
     return MICRODB_OK;
@@ -356,6 +391,7 @@ static microdb_err_t microdb_kv_set_at_internal(microdb_t *db,
     microdb_core_t *core;
     microdb_kv_bucket_t *bucket;
     uint32_t slot;
+    uint32_t probe_collisions = 0u;
     bool found;
     microdb_err_t err;
 
@@ -372,7 +408,7 @@ static microdb_err_t microdb_kv_set_at_internal(microdb_t *db,
         return MICRODB_ERR_INVALID;
     }
 
-    err = microdb_kv_find_slot(core, key, &slot, &found);
+    err = microdb_kv_find_slot(core, key, &slot, &found, &probe_collisions);
     if (err != MICRODB_OK && err != MICRODB_ERR_FULL) {
         return err;
     }
@@ -385,7 +421,7 @@ static microdb_err_t microdb_kv_set_at_internal(microdb_t *db,
         if (err != MICRODB_OK) {
             return err;
         }
-        err = microdb_kv_find_slot(core, key, &slot, &found);
+        err = microdb_kv_find_slot(core, key, &slot, &found, &probe_collisions);
         if (err != MICRODB_OK) {
             return err;
         }
@@ -394,6 +430,7 @@ static microdb_err_t microdb_kv_set_at_internal(microdb_t *db,
 
     bucket = &core->kv.buckets[slot];
     if (!found) {
+        core->kv.collision_count += probe_collisions;
         core->kv.entry_count++;
     }
 
@@ -411,9 +448,10 @@ static microdb_err_t microdb_kv_set_at_internal(microdb_t *db,
     }
 
     bucket->state = MICRODB_KV_BUCKET_LIVE;
+    bucket->key_hash = microdb_kv_hash(key);
     memcpy(bucket->key, key, strlen(key) + 1u);
     bucket->expires_at = expires_at;
-    bucket->last_access = core->kv.access_clock++;
+    bucket->last_access = microdb_kv_next_access_clock(core);
     core->live_bytes = microdb_kv_live_bytes(db);
     if (persist) {
         err = microdb_persist_kv_set(db, key, val, len, expires_at);
@@ -470,12 +508,12 @@ microdb_err_t microdb_kv_set(microdb_t *db, const char *key, const void *val, si
         memset(entry, 0, sizeof(*entry));
         memcpy(entry->key, key, strlen(key) + 1u);
         entry->val_len = len;
+        entry->expires_at = expires_at;
         entry->op = MICRODB_TXN_OP_PUT;
         if (len != 0u) {
             memcpy(entry->val_buf, val, len);
         }
         entry->val_ptr = entry->val_buf;
-        (void)expires_at;
         core->txn_stage_count++;
         rc = MICRODB_OK;
     } else {
@@ -542,7 +580,7 @@ microdb_err_t microdb_kv_get(microdb_t *db, const char *key, void *buf, size_t b
         }
     }
 
-    err = microdb_kv_find_slot(core, key, &slot, &found);
+    err = microdb_kv_find_slot(core, key, &slot, &found, NULL);
     if (err != MICRODB_OK || !found) {
         rc = MICRODB_ERR_NOT_FOUND;
         goto unlock;
@@ -567,7 +605,7 @@ microdb_err_t microdb_kv_get(microdb_t *db, const char *key, void *buf, size_t b
         memcpy(buf, &core->kv.value_store[bucket->val_offset], bucket->val_len);
     }
 
-    bucket->last_access = core->kv.access_clock++;
+    bucket->last_access = microdb_kv_next_access_clock(core);
     rc = MICRODB_OK;
 
 unlock:
@@ -582,7 +620,7 @@ static microdb_err_t microdb_kv_del_internal(microdb_t *db, const char *key, boo
     microdb_err_t err;
 
     core = microdb_core(db);
-    err = microdb_kv_find_slot(core, key, &slot, &found);
+    err = microdb_kv_find_slot(core, key, &slot, &found, NULL);
     if (err != MICRODB_OK || !found) {
         return MICRODB_ERR_NOT_FOUND;
     }
@@ -656,7 +694,7 @@ microdb_err_t microdb_kv_exists(microdb_t *db, const char *key) {
         goto unlock;
     }
 
-    err = microdb_kv_find_slot(core, key, &slot, &found);
+    err = microdb_kv_find_slot(core, key, &slot, &found, NULL);
     if (err != MICRODB_OK || !found) {
         err = MICRODB_ERR_NOT_FOUND;
         goto unlock;
@@ -668,7 +706,7 @@ microdb_err_t microdb_kv_exists(microdb_t *db, const char *key) {
         goto unlock;
     }
 
-    bucket->last_access = core->kv.access_clock++;
+    bucket->last_access = microdb_kv_next_access_clock(core);
     err = MICRODB_OK;
 
 unlock:
@@ -722,6 +760,7 @@ microdb_err_t microdb_kv_iter(microdb_t *db, microdb_kv_iter_cb_t cb, void *ctx)
         }
 
         done = (i >= core->kv.bucket_count) && !have_item;
+        /* Callback/lock invariant: user callback is invoked without DB lock held. */
         MICRODB_UNLOCK(db);
 
         if (have_item) {
@@ -803,6 +842,7 @@ microdb_err_t microdb_kv_clear(microdb_t *db) {
     memset(core->kv.buckets, 0, bucket_bytes);
     core->kv.entry_count = 0u;
     core->kv.value_used = 0u;
+    core->kv.live_value_bytes = 0u;
     core->kv.access_clock = 1u;
     core->live_bytes = microdb_kv_live_bytes(db);
     if (!(core->wal_enabled && core->storage != NULL && !core->storage_loading && !core->wal_replaying)) {
@@ -860,6 +900,10 @@ microdb_err_t microdb_txn_commit(microdb_t *db) {
         goto unlock;
     }
 
+    /* TXN visibility invariant:
+     * - stage entries are durable in WAL before commit marker.
+     * - staged entries become visible in live KV only after durable TXN_COMMIT marker.
+     */
     if (core->wal_enabled && core->storage != NULL && !core->storage_loading && !core->wal_replaying) {
         uint32_t needed = 16u; /* TXN_COMMIT marker */
         for (i = 0u; i < core->txn_stage_count; ++i) {
@@ -880,7 +924,7 @@ microdb_err_t microdb_txn_commit(microdb_t *db) {
     for (i = 0u; i < core->txn_stage_count; ++i) {
         microdb_txn_stage_entry_t *entry = &core->txn_stage[i];
         if (entry->op == MICRODB_TXN_OP_PUT) {
-            rc = microdb_persist_kv_set_txn(db, entry->key, entry->val_ptr, entry->val_len, 0u);
+            rc = microdb_persist_kv_set_txn(db, entry->key, entry->val_ptr, entry->val_len, entry->expires_at);
             if (rc != MICRODB_OK) {
                 goto unlock;
             }
@@ -900,7 +944,7 @@ microdb_err_t microdb_txn_commit(microdb_t *db) {
     for (i = 0u; i < core->txn_stage_count; ++i) {
         microdb_txn_stage_entry_t *entry = &core->txn_stage[i];
         if (entry->op == MICRODB_TXN_OP_PUT) {
-            rc = microdb_kv_set_at_internal(db, entry->key, entry->val_ptr, entry->val_len, 0u, false);
+            rc = microdb_kv_set_at_internal(db, entry->key, entry->val_ptr, entry->val_len, entry->expires_at, false);
             if (rc != MICRODB_OK) {
                 goto unlock;
             }

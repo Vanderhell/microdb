@@ -32,6 +32,45 @@ static microdb_ts_stream_t *microdb_ts_find(microdb_core_t *core, const char *na
     return NULL;
 }
 
+static uint32_t microdb_ts_stream_val_size(const microdb_ts_stream_t *stream) {
+    return (stream->type == MICRODB_TS_RAW) ? (uint32_t)stream->raw_size : 4u;
+}
+
+static uint32_t microdb_ts_stream_stride(const microdb_ts_stream_t *stream) {
+    return (uint32_t)sizeof(microdb_timestamp_t) + microdb_ts_stream_val_size(stream);
+}
+
+static uint8_t *microdb_ts_sample_ptr(microdb_ts_stream_t *stream, uint32_t idx) {
+    return stream->buf + (idx * stream->sample_stride);
+}
+
+static const uint8_t *microdb_ts_sample_ptr_const(const microdb_ts_stream_t *stream, uint32_t idx) {
+    return stream->buf + (idx * stream->sample_stride);
+}
+
+static void microdb_ts_read_sample(const microdb_ts_stream_t *stream, uint32_t idx, microdb_ts_sample_t *out) {
+    const uint8_t *slot = microdb_ts_sample_ptr_const(stream, idx);
+    uint32_t val_len = microdb_ts_stream_val_size(stream);
+
+    memset(out, 0, sizeof(*out));
+    memcpy(&out->ts, slot, sizeof(out->ts));
+    memcpy(&out->v, slot + sizeof(out->ts), val_len);
+}
+
+static void microdb_ts_write_sample(const microdb_ts_stream_t *stream, uint32_t idx, const microdb_ts_sample_t *sample) {
+    uint8_t *slot = microdb_ts_sample_ptr((microdb_ts_stream_t *)stream, idx);
+    uint32_t val_len = microdb_ts_stream_val_size(stream);
+
+    memcpy(slot, &sample->ts, sizeof(sample->ts));
+    memcpy(slot + sizeof(sample->ts), &sample->v, val_len);
+}
+
+static void microdb_ts_copy_sample_slot(const microdb_ts_stream_t *stream, uint32_t dst_idx, uint32_t src_idx) {
+    uint8_t *dst = microdb_ts_sample_ptr((microdb_ts_stream_t *)stream, dst_idx);
+    const uint8_t *src = microdb_ts_sample_ptr_const(stream, src_idx);
+    memcpy(dst, src, stream->sample_stride);
+}
+
 static microdb_err_t microdb_ts_register_apply(microdb_core_t *core,
                                                const char *name,
                                                microdb_ts_type_t type,
@@ -52,11 +91,20 @@ static microdb_err_t microdb_ts_register_apply(microdb_core_t *core,
             memcpy(stream->name, name, strlen(name) + 1u);
             stream->type = type;
             stream->raw_size = (type == MICRODB_TS_RAW) ? raw_size : 0u;
+            stream->sample_stride = microdb_ts_stream_stride(stream);
+            if (stream->sample_stride == 0u) {
+                return MICRODB_ERR_INVALID;
+            }
+            stream->capacity = (uint32_t)((core->ts_arena.capacity / MICRODB_TS_MAX_STREAMS) / stream->sample_stride);
+            if (stream->capacity < 4u) {
+                return MICRODB_ERR_NO_MEM;
+            }
             stream->head = 0u;
             stream->tail = 0u;
             stream->count = 0u;
             stream->registered = true;
             core->ts.registered_streams++;
+            core->ts.mutation_seq++;
             return MICRODB_OK;
         }
     }
@@ -64,27 +112,25 @@ static microdb_err_t microdb_ts_register_apply(microdb_core_t *core,
     return MICRODB_ERR_FULL;
 }
 
-static microdb_err_t microdb_ts_sample_capacity(const microdb_core_t *core, uint32_t *capacity_out) {
+static microdb_err_t microdb_ts_stream_bytes(const microdb_core_t *core, uint32_t *bytes_out) {
     size_t bytes_per_stream;
-    uint32_t capacity;
 
     bytes_per_stream = core->ts_arena.capacity / MICRODB_TS_MAX_STREAMS;
-    capacity = (uint32_t)(bytes_per_stream / sizeof(microdb_ts_sample_t));
-    if (capacity < 4u) {
+    if (bytes_per_stream < (sizeof(microdb_timestamp_t) + 4u) * 4u) {
         return MICRODB_ERR_NO_MEM;
     }
 
-    *capacity_out = capacity;
+    *bytes_out = (uint32_t)bytes_per_stream;
     return MICRODB_OK;
 }
 
 static void microdb_ts_set_value(microdb_ts_stream_t *stream, microdb_ts_sample_t *sample, const void *val) {
     if (stream->type == MICRODB_TS_F32) {
-        sample->v.f32 = *(const float *)val;
+        memcpy(&sample->v.f32, val, sizeof(sample->v.f32));
     } else if (stream->type == MICRODB_TS_I32) {
-        sample->v.i32 = *(const int32_t *)val;
+        memcpy(&sample->v.i32, val, sizeof(sample->v.i32));
     } else if (stream->type == MICRODB_TS_U32) {
-        sample->v.u32 = *(const uint32_t *)val;
+        memcpy(&sample->v.u32, val, sizeof(sample->v.u32));
     } else {
         memcpy(sample->v.raw, val, stream->raw_size);
     }
@@ -93,14 +139,16 @@ static void microdb_ts_set_value(microdb_ts_stream_t *stream, microdb_ts_sample_
 static void microdb_ts_rb_insert(microdb_ts_stream_t *stream, const microdb_ts_sample_t *sample) {
     if (stream->count == stream->capacity) {
 #if MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_DROP_OLDEST
+        microdb_ts_sample_t dropped;
+        microdb_ts_read_sample(stream, stream->tail, &dropped);
         MICRODB_LOG("WARN",
                     "TS stream '%s' full: dropping oldest sample ts=%u",
                     stream->name,
-                    (unsigned)stream->buf[stream->tail].ts);
+                    (unsigned)dropped.ts);
 #endif
     }
 
-    stream->buf[stream->head] = *sample;
+    microdb_ts_write_sample(stream, stream->head, sample);
     stream->head = (stream->head + 1u) % stream->capacity;
 
     if (stream->count < stream->capacity) {
@@ -115,22 +163,32 @@ static void microdb_ts_downsample_oldest(microdb_ts_stream_t *stream) {
     uint32_t i1 = (stream->tail + 1u) % stream->capacity;
     uint32_t idx;
     uint32_t next;
-    microdb_ts_sample_t *a = &stream->buf[i0];
-    microdb_ts_sample_t *b = &stream->buf[i1];
+    microdb_ts_sample_t a;
+    microdb_ts_sample_t b;
+
+    microdb_ts_read_sample(stream, i0, &a);
+    microdb_ts_read_sample(stream, i1, &b);
 
     MICRODB_LOG("INFO",
                 "TS stream '%s' downsampling oldest two samples",
                 stream->name);
 
-    a->ts = (a->ts / 2u) + (b->ts / 2u);
+    a.ts = (a.ts / 2u) + (b.ts / 2u);
 
     if (stream->type == MICRODB_TS_F32) {
-        a->v.f32 = (a->v.f32 + b->v.f32) * 0.5f;
+        a.v.f32 = (a.v.f32 + b.v.f32) * 0.5f;
     } else if (stream->type == MICRODB_TS_I32) {
-        a->v.i32 = (a->v.i32 / 2) + (b->v.i32 / 2);
+        a.v.i32 = (a.v.i32 / 2) + (b.v.i32 / 2);
     } else if (stream->type == MICRODB_TS_U32) {
-        a->v.u32 = (a->v.u32 / 2u) + (b->v.u32 / 2u);
+        a.v.u32 = (a.v.u32 / 2u) + (b.v.u32 / 2u);
+    } else {
+        size_t i;
+        for (i = 0u; i < stream->raw_size; ++i) {
+            uint16_t merged = (uint16_t)a.v.raw[i] + (uint16_t)b.v.raw[i];
+            a.v.raw[i] = (uint8_t)(merged / 2u);
+        }
     }
+    microdb_ts_write_sample(stream, i0, &a);
 
     idx = i1;
     while (idx != stream->head) {
@@ -138,7 +196,7 @@ static void microdb_ts_downsample_oldest(microdb_ts_stream_t *stream) {
         if (next == stream->head) {
             break;
         }
-        stream->buf[idx] = stream->buf[next];
+        microdb_ts_copy_sample_slot(stream, idx, next);
         idx = next;
     }
 
@@ -149,21 +207,21 @@ static void microdb_ts_downsample_oldest(microdb_ts_stream_t *stream) {
 microdb_err_t microdb_ts_init(microdb_t *db) {
     microdb_core_t *core = microdb_core(db);
 #if MICRODB_ENABLE_TS
-    uint32_t capacity;
+    uint32_t stream_bytes;
     uint32_t i;
 #endif
 
     memset(&core->ts, 0, sizeof(core->ts));
 
 #if MICRODB_ENABLE_TS
-    if (microdb_ts_sample_capacity(core, &capacity) != MICRODB_OK) {
+    if (microdb_ts_stream_bytes(core, &stream_bytes) != MICRODB_OK) {
         return MICRODB_ERR_NO_MEM;
     }
 
     for (i = 0; i < MICRODB_TS_MAX_STREAMS; ++i) {
-        core->ts.streams[i].buf =
-            (microdb_ts_sample_t *)(core->ts_arena.base + (i * capacity * sizeof(microdb_ts_sample_t)));
-        core->ts.streams[i].capacity = capacity;
+        core->ts.streams[i].buf = core->ts_arena.base + (i * stream_bytes);
+        core->ts.streams[i].sample_stride = 0u;
+        core->ts.streams[i].capacity = 0u;
     }
 #endif
 
@@ -231,6 +289,9 @@ microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_ty
         if (restore_index != UINT32_MAX) {
             core->ts.streams[restore_index] = restore_stream;
         }
+        if (core->ts.mutation_seq != 0u) {
+            core->ts.mutation_seq--;
+        }
     }
 
 unlock:
@@ -271,6 +332,7 @@ microdb_err_t microdb_ts_insert(microdb_t *db, const char *name, microdb_timesta
         MICRODB_LOG("WARN",
                     "TS stream '%s' full: rejecting new sample (REJECT policy)",
                     stream->name);
+        core->ts_dropped_samples++;
         rc = MICRODB_ERR_FULL;
         goto unlock;
     }
@@ -285,9 +347,15 @@ microdb_err_t microdb_ts_insert(microdb_t *db, const char *name, microdb_timesta
 #if MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_DOWNSAMPLE
         if (stream->count == stream->capacity) {
             microdb_ts_downsample_oldest(stream);
+            core->ts_dropped_samples++;
+        }
+#elif MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_DROP_OLDEST
+        if (stream->count == stream->capacity) {
+            core->ts_dropped_samples++;
         }
 #endif
         microdb_ts_rb_insert(stream, &sample);
+        core->ts.mutation_seq++;
         microdb__maybe_compact(db);
     }
 
@@ -320,7 +388,7 @@ microdb_err_t microdb_ts_last(microdb_t *db, const char *name, microdb_ts_sample
     }
 
     idx = (stream->head + stream->capacity - 1u) % stream->capacity;
-    *out = stream->buf[idx];
+    microdb_ts_read_sample(stream, idx, out);
     rc = MICRODB_OK;
 
 unlock:
@@ -338,6 +406,7 @@ microdb_err_t microdb_ts_query(microdb_t *db,
     microdb_ts_stream_t *stream;
     uint32_t i;
     uint32_t idx;
+    uint32_t snapshot_mutation_seq;
     microdb_err_t rc = MICRODB_OK;
 
     if (db == NULL || cb == NULL) {
@@ -361,9 +430,11 @@ microdb_err_t microdb_ts_query(microdb_t *db,
         uint32_t snapshot_tail = stream->tail;
         uint32_t snapshot_count = stream->count;
         uint32_t cap = stream->capacity;
+        snapshot_mutation_seq = core->ts.mutation_seq;
         idx = snapshot_tail;
         for (i = 0u; i < snapshot_count; ++i) {
-            microdb_ts_sample_t sample = stream->buf[idx];
+            microdb_ts_sample_t sample;
+            microdb_ts_read_sample(stream, idx, &sample);
             bool in_range = (from <= to && sample.ts >= from && sample.ts <= to);
             idx = (idx + 1u) % cap;
             MICRODB_UNLOCK(db);
@@ -373,11 +444,17 @@ microdb_err_t microdb_ts_query(microdb_t *db,
             MICRODB_LOCK(db);
             core = microdb_core(db);
             if (core->magic != MICRODB_MAGIC) {
-                return MICRODB_ERR_INVALID;
+                rc = MICRODB_ERR_INVALID;
+                goto unlock;
             }
             stream = microdb_ts_find(core, name);
             if (stream == NULL) {
-                return MICRODB_ERR_NOT_FOUND;
+                rc = MICRODB_ERR_NOT_FOUND;
+                goto unlock;
+            }
+            if (core->ts.mutation_seq != snapshot_mutation_seq) {
+                rc = MICRODB_ERR_MODIFIED;
+                goto unlock;
             }
         }
     }
@@ -422,10 +499,11 @@ microdb_err_t microdb_ts_query_buf(microdb_t *db,
 
     idx = stream->tail;
     for (i = 0; i < stream->count; ++i) {
-        microdb_ts_sample_t *sample = &stream->buf[idx];
-        if (from <= to && sample->ts >= from && sample->ts <= to) {
+        microdb_ts_sample_t sample;
+        microdb_ts_read_sample(stream, idx, &sample);
+        if (from <= to && sample.ts >= from && sample.ts <= to) {
             if (written < max_count) {
-                buf[written] = *sample;
+                buf[written] = sample;
             } else {
                 status = MICRODB_ERR_OVERFLOW;
             }
@@ -474,8 +552,9 @@ microdb_err_t microdb_ts_count(microdb_t *db,
 
     idx = stream->tail;
     for (i = 0; i < stream->count; ++i) {
-        microdb_ts_sample_t *sample = &stream->buf[idx];
-        if (from <= to && sample->ts >= from && sample->ts <= to) {
+        microdb_ts_sample_t sample;
+        microdb_ts_read_sample(stream, idx, &sample);
+        if (from <= to && sample.ts >= from && sample.ts <= to) {
             count++;
         }
         idx = (idx + 1u) % stream->capacity;
@@ -522,6 +601,7 @@ microdb_err_t microdb_ts_clear(microdb_t *db, const char *name) {
         stream->head = 0u;
         stream->tail = 0u;
         stream->count = 0u;
+        core->ts.mutation_seq++;
         goto unlock;
     }
 
@@ -531,11 +611,13 @@ microdb_err_t microdb_ts_clear(microdb_t *db, const char *name) {
     stream->head = 0u;
     stream->tail = 0u;
     stream->count = 0u;
+    core->ts.mutation_seq++;
     rc = microdb_storage_flush(db);
     if (rc != MICRODB_OK) {
         stream->head = saved_head;
         stream->tail = saved_tail;
         stream->count = saved_count;
+        core->ts.mutation_seq--;
     }
 
 unlock:
