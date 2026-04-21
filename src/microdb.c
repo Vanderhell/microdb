@@ -60,6 +60,8 @@ const char *microdb_err_to_string(microdb_err_t err) {
             return "MICRODB_ERR_SCHEMA";
         case MICRODB_ERR_TXN_ACTIVE:
             return "MICRODB_ERR_TXN_ACTIVE";
+        case MICRODB_ERR_MODIFIED:
+            return "MICRODB_ERR_MODIFIED";
         default:
             return "MICRODB_ERR_UNKNOWN";
     }
@@ -1024,9 +1026,11 @@ microdb_err_t microdb_admit_rel_insert(microdb_t *db, const char *table_name, si
         }
     }
 
-    if (out->would_compact != 0u) {
+    if (out->would_compact != 0u || out->would_degrade != 0u) {
         out->deterministic_budget_ok = 0u;
-    } else if (out->deterministic_budget_ok == 0u && out->would_degrade == 0u) {
+    } else if (out->status == MICRODB_OK &&
+               out->deterministic_budget_ok == 0u &&
+               out->would_degrade == 0u) {
         out->deterministic_budget_ok = 1u;
     }
     out->status = MICRODB_OK;

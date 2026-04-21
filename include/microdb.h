@@ -282,7 +282,8 @@ typedef enum {
     MICRODB_ERR_DISABLED = -10,
     MICRODB_ERR_OVERFLOW = -11,
     MICRODB_ERR_SCHEMA = -12,
-    MICRODB_ERR_TXN_ACTIVE = -13
+    MICRODB_ERR_TXN_ACTIVE = -13,
+    MICRODB_ERR_MODIFIED = -14
 } microdb_err_t;
 
 /* Returns a stable symbolic name for a microdb error code.

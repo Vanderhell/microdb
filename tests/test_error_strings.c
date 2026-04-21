@@ -25,6 +25,7 @@ MDB_TEST(test_known_error_names) {
     ASSERT_EQ(strcmp(microdb_err_to_string(MICRODB_ERR_OVERFLOW), "MICRODB_ERR_OVERFLOW"), 0);
     ASSERT_EQ(strcmp(microdb_err_to_string(MICRODB_ERR_SCHEMA), "MICRODB_ERR_SCHEMA"), 0);
     ASSERT_EQ(strcmp(microdb_err_to_string(MICRODB_ERR_TXN_ACTIVE), "MICRODB_ERR_TXN_ACTIVE"), 0);
+    ASSERT_EQ(strcmp(microdb_err_to_string(MICRODB_ERR_MODIFIED), "MICRODB_ERR_MODIFIED"), 0);
 }
 
 MDB_TEST(test_unknown_error_name) {

@@ -346,7 +346,7 @@ typedef bool (*microdb_ts_query_cb_t)(const microdb_ts_sample_t *sample, void *c
 `microdb_ts_query` intentionally unlocks before invoking your callback and re-locks after callback return.
 
 - If callback (or another thread/task) mutates TS state during the query window, `mutation_seq` changes.
-- When that happens, `microdb_ts_query` returns `MICRODB_ERR_INVALID`.
+- When that happens, `microdb_ts_query` returns `MICRODB_ERR_MODIFIED`.
 - Treat this return value as "iteration snapshot invalidated by concurrent mutation", not as storage corruption.
 
 Safe caller pattern:

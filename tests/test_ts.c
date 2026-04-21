@@ -315,7 +315,7 @@ MDB_TEST(ts_query_null_callback_invalid) {
     ASSERT_EQ(microdb_ts_query(&g_db, "cb", 0u, 10u, NULL, NULL), MICRODB_ERR_INVALID);
 }
 
-MDB_TEST(ts_query_mutation_during_callback_returns_invalid) {
+MDB_TEST(ts_query_mutation_during_callback_returns_modified) {
     uint32_t a = 1u;
     uint32_t b = 2u;
 
@@ -323,7 +323,7 @@ MDB_TEST(ts_query_mutation_during_callback_returns_invalid) {
     ASSERT_EQ(microdb_ts_insert(&g_db, "mut", 1u, &a), MICRODB_OK);
     ASSERT_EQ(microdb_ts_insert(&g_db, "mut", 2u, &b), MICRODB_OK);
     g_ts_mutate_once = false;
-    ASSERT_EQ(microdb_ts_query(&g_db, "mut", 0u, 100u, ts_query_mutating_cb, NULL), MICRODB_ERR_INVALID);
+    ASSERT_EQ(microdb_ts_query(&g_db, "mut", 0u, 100u, ts_query_mutating_cb, NULL), MICRODB_ERR_MODIFIED);
 }
 
 MDB_TEST(ts_drop_oldest_when_ring_buffer_full) {
@@ -373,7 +373,7 @@ int main(void) {
     MDB_RUN_TEST(setup_basic, teardown_db, ts_raw_invalid_size_zero);
     MDB_RUN_TEST(setup_basic, teardown_db, ts_raw_invalid_size_too_large);
     MDB_RUN_TEST(setup_basic, teardown_db, ts_query_null_callback_invalid);
-    MDB_RUN_TEST(setup_basic, teardown_db, ts_query_mutation_during_callback_returns_invalid);
+    MDB_RUN_TEST(setup_basic, teardown_db, ts_query_mutation_during_callback_returns_modified);
     MDB_RUN_TEST(setup_basic, teardown_db, ts_drop_oldest_when_ring_buffer_full);
     return MDB_RESULT();
 }

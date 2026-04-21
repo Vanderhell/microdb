@@ -453,7 +453,7 @@ microdb_err_t microdb_ts_query(microdb_t *db,
                 goto unlock;
             }
             if (core->ts.mutation_seq != snapshot_mutation_seq) {
-                rc = MICRODB_ERR_INVALID;
+                rc = MICRODB_ERR_MODIFIED;
                 goto unlock;
             }
         }
