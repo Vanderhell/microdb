@@ -9,7 +9,7 @@
 [![CI](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml)
 [![Language: C99](https://img.shields.io/badge/language-C99-blue)](https://en.wikipedia.org/wiki/C99)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-orange)](https://github.com/Vanderhell/microdb)
+[![Platform: MCU | Linux | Windows | macOS](https://img.shields.io/badge/platform-MCU%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS-informational)](https://github.com/Vanderhell/microdb)
 [![Tests](https://img.shields.io/badge/tests-ctest-brightgreen)](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Vanderhell/microdb)](https://github.com/Vanderhell/microdb/releases)
 [![Wiki](https://img.shields.io/badge/docs-wiki-blue)](https://github.com/Vanderhell/microdb/wiki)
