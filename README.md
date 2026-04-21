@@ -343,11 +343,12 @@ Semantics:
 
 | MICRODB_RAM_KB | KV entries (est.) | TS samples/stream (est.) | REL rows (est.) | Typical use |
 |---------------|-------------------|--------------------------|-----------------|-------------|
-| 8 KB          | ~20               | ~200                     | ~10             | Minimal sensor node |
-| 32 KB         | ~64               | ~1 500                   | ~30             | Default IoT device |
-| 64 KB         | ~150              | ~3 000                   | ~80             | Gateway node |
-| 128 KB        | ~300              | ~6 000                   | ~160            | ESP32 + PSRAM |
-| 256 KB        | ~600              | ~12 000                  | ~320            | ESP32-S3 + PSRAM |
+| 8 KB          | ~3                | ~32                      | ~4              | Ultra-tiny KV-focused profile |
+| 16 KB         | ~40               | ~136                     | ~8              | Small MCU baseline |
+| 32 KB         | ~64               | ~1 500                   | ~30             | General embedded node |
+| 64 KB         | ~150              | ~3 000                   | ~80             | Rich sensing / control node |
+| 128 KB        | ~300              | ~6 000                   | ~160            | MCU + external RAM |
+| 256 KB        | ~600              | ~12 000                  | ~320            | High-retention edge node |
 | 512 KB        | ~1 200            | ~24 000                  | ~640            | Linux embedded |
 | 1024 KB       | ~2 500            | ~48 000                  | ~1 300          | Resource-rich MCU |
 | txn staging overhead | `MICRODB_TXN_STAGE_KEYS * sizeof(microdb_txn_stage_entry_t)` bytes | same | same | Reserved from KV slice |
