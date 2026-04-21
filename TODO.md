@@ -142,3 +142,9 @@
      - threshold policy relative to post-compact snapshot footprint
    - reduce POSIX-only syscall artifact from scatter-write path (`writev` or small-buffer coalescing)
    - document that desktop POSIX benches are trend tools and not direct SPI-flash latency proxies
+9. [pending] WAL conditional compilation for KV-only footprint:
+   - gate TS/REL snapshot functions in `src/microdb_wal.c` with engine flags (`MICRODB_ENABLE_TS`, `MICRODB_ENABLE_REL`)
+   - focus on `microdb_write_ts_page`, `microdb_load_ts_page`, `microdb_write_rel_page`, `microdb_load_rel_page`
+   - gate related callsites in snapshot/bootstrap flows (`microdb_write_snapshot_bank`, `microdb_storage_bootstrap`)
+   - target lower retained WAL text size for KV+WAL builds under `--gc-sections`
+   - keep snapshot/WAL format and recovery behavior unchanged for full-feature builds

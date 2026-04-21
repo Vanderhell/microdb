@@ -28,6 +28,15 @@ typedef struct {
 
 microdb_ie_options_t microdb_ie_default_options(void);
 
+/* Data fidelity contract:
+ * - KV/TS/REL payloads are exported as hex-encoded bytes (`value_hex` / `row_hex`),
+ *   so import/export is byte-exact on the same architecture/ABI.
+ * - KV TTL in JSON is remaining TTL seconds (not absolute expires_at).
+ *   Non-expiring keys are represented as ttl=0.
+ * - Cross-architecture transfer may require explicit normalization
+ *   (endianness/ABI-sensitive binary layouts, especially raw REL rows).
+ */
+
 /* Exports selected KV keys into JSON:
  * {"format":"microdb.kv.v1","items":[{"key":"...","ttl":N,"value_hex":"..."}]}
  */
