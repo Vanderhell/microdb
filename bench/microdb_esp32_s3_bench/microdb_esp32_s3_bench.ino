@@ -870,6 +870,127 @@ static void print_last_metrics(void) {
   }
 }
 
+static bool run_real_data_suite(void) {
+  const char *first_fail = NULL;
+  microdb_table_t *table = NULL;
+  microdb_schema_t schema;
+  uint32_t u32 = 0u;
+  uint32_t v_5000 = 5000u;
+  uint32_t v_1 = 1u;
+  uint32_t v_100 = 100u;
+  uint32_t v_999 = 999u;
+  uint8_t sev_3 = 3u;
+  float tf1 = 18.5f;
+  float tf2 = 19.2f;
+  size_t out_len = 0u;
+  microdb_ts_sample_t ts_last;
+  size_t ts_count = 0u;
+  uint32_t rel_count = 0u;
+  uint32_t deleted = 0u;
+  uint8_t row[64];
+  uint8_t out_row[64];
+  microdb_db_stats_t dbs;
+  microdb_kv_stats_t kvs;
+  microdb_ts_stats_t tss;
+  microdb_rel_stats_t rs;
+  microdb_effective_capacity_t ec;
+  microdb_pressure_t p;
+  microdb_admission_t adm;
+
+#define RD_CHECK_REAL(label, expr)                                                                                                 \
+  do {                                                                                                                             \
+    uint32_t _t0 = micros();                                                                                                       \
+    microdb_err_t _rc = (expr);                                                                                                    \
+    uint32_t _dt = micros() - _t0;                                                                                                 \
+    MDB_CONSOLE.printf("[RD][%-30s] rc=%s (%d) %lu us\n", (label), microdb_err_to_string(_rc), (int)_rc, (unsigned long)_dt);   \
+    if (_rc != MICRODB_OK) {                                                                                                       \
+      first_fail = (label);                                                                                                        \
+      goto rd_fail;                                                                                                                \
+    }                                                                                                                              \
+  } while (0)
+
+#define RD_EXPECT_REAL(label, cond)                                                                                                \
+  do {                                                                                                                             \
+    bool _ok = (cond);                                                                                                             \
+    MDB_CONSOLE.printf("[RD][%-30s] expect=%s\n", (label), _ok ? "OK" : "FAIL");                                                 \
+    if (!_ok) {                                                                                                                    \
+      first_fail = (label);                                                                                                        \
+      goto rd_fail;                                                                                                                \
+    }                                                                                                                              \
+  } while (0)
+
+  RD_CHECK_REAL("kv_put/wifi.ssid", microdb_kv_put(&g_db, "wifi.ssid", "HomeNetwork_5G", 14u));
+  RD_CHECK_REAL("kv_set/interval", microdb_kv_set(&g_db, "sensor.interval_ms", &v_5000, sizeof(uint32_t), 0u));
+  RD_CHECK_REAL("kv_set/boot.count", microdb_kv_set(&g_db, "boot.count", &v_1, sizeof(uint32_t), 2u));
+  RD_CHECK_REAL("kv_get/interval", microdb_kv_get(&g_db, "sensor.interval_ms", &u32, sizeof(u32), &out_len));
+  RD_EXPECT_REAL("assert/interval", u32 == 5000u && out_len == sizeof(uint32_t));
+  RD_CHECK_REAL("kv_del/boot.count", microdb_kv_del(&g_db, "boot.count"));
+  RD_CHECK_REAL("admit_kv_set", microdb_admit_kv_set(&g_db, "wifi.ssid", 16u, &adm));
+
+  RD_CHECK_REAL("ts_register/temp", microdb_ts_register(&g_db, "temperature", MICRODB_TS_F32, 0u));
+  RD_CHECK_REAL("ts_insert/t1", microdb_ts_insert(&g_db, "temperature", 1700000000u, &tf1));
+  RD_CHECK_REAL("ts_insert/t2", microdb_ts_insert(&g_db, "temperature", 1700000120u, &tf2));
+  RD_CHECK_REAL("ts_last/temp", microdb_ts_last(&g_db, "temperature", &ts_last));
+  RD_EXPECT_REAL("assert/ts_last", ts_last.ts == 1700000120u);
+  RD_CHECK_REAL("ts_count/temp", microdb_ts_count(&g_db, "temperature", 0u, (microdb_timestamp_t)0xFFFFFFFFu, &ts_count));
+  RD_EXPECT_REAL("assert/ts_count", ts_count >= 2u);
+
+  memset(&schema, 0, sizeof(schema));
+  RD_CHECK_REAL("rel_schema_init", microdb_schema_init(&schema, "event_log", 16u));
+  RD_CHECK_REAL("rel_schema_add/id", microdb_schema_add(&schema, "id", MICRODB_COL_U32, sizeof(uint32_t), true));
+  RD_CHECK_REAL("rel_schema_add/sev", microdb_schema_add(&schema, "severity", MICRODB_COL_U8, sizeof(uint8_t), false));
+  RD_CHECK_REAL("rel_schema_seal", microdb_schema_seal(&schema));
+  {
+    microdb_err_t rc = microdb_table_create(&g_db, &schema);
+    MDB_CONSOLE.printf("[RD][%-30s] rc=%s (%d)\n", "rel_table_create", microdb_err_to_string(rc), (int)rc);
+    if (rc != MICRODB_OK && rc != MICRODB_ERR_EXISTS) {
+      first_fail = "rel_table_create";
+      goto rd_fail;
+    }
+  }
+  RD_CHECK_REAL("rel_table_get", microdb_table_get(&g_db, "event_log", &table));
+  RD_CHECK_REAL("rel_clear", microdb_rel_clear(&g_db, table));
+  memset(row, 0, sizeof(row));
+  RD_CHECK_REAL("rel_row_set/id", microdb_row_set(table, row, "id", &v_1));
+  RD_CHECK_REAL("rel_row_set/sev", microdb_row_set(table, row, "severity", &sev_3));
+  RD_CHECK_REAL("rel_insert", microdb_rel_insert(&g_db, table, row));
+  RD_CHECK_REAL("rel_find_by/id", microdb_rel_find_by(&g_db, table, "id", &v_1, out_row));
+  RD_CHECK_REAL("rel_count", microdb_rel_count(table, &rel_count));
+  RD_EXPECT_REAL("assert/rel_count", rel_count == 1u);
+  RD_CHECK_REAL("rel_delete/id", microdb_rel_delete(&g_db, table, &v_1, &deleted));
+  RD_EXPECT_REAL("assert/rel_delete", deleted == 1u);
+  RD_CHECK_REAL("admit_rel_insert", microdb_admit_rel_insert(&g_db, "event_log", microdb_table_row_size(table), &adm));
+
+  RD_CHECK_REAL("txn_begin", microdb_txn_begin(&g_db));
+  RD_CHECK_REAL("txn_set/a", microdb_kv_set(&g_db, "txn.a", &v_100, sizeof(uint32_t), 0u));
+  RD_CHECK_REAL("txn_commit", microdb_txn_commit(&g_db));
+  RD_CHECK_REAL("txn_begin2", microdb_txn_begin(&g_db));
+  RD_CHECK_REAL("txn_set/undo", microdb_kv_set(&g_db, "txn.undo", &v_999, sizeof(uint32_t), 0u));
+  RD_CHECK_REAL("txn_rollback", microdb_txn_rollback(&g_db));
+
+  RD_CHECK_REAL("flush", microdb_flush(&g_db));
+  RD_CHECK_REAL("deinit", microdb_deinit(&g_db));
+  RD_CHECK_REAL("reinit", db_open(false, false));
+  RD_CHECK_REAL("recover/kv_get", microdb_kv_get(&g_db, "wifi.ssid", row, sizeof(row), &out_len));
+  RD_CHECK_REAL("recover/ts_count", microdb_ts_count(&g_db, "temperature", 0u, (microdb_timestamp_t)0xFFFFFFFFu, &ts_count));
+  RD_CHECK_REAL("db_stats", microdb_get_db_stats(&g_db, &dbs));
+  RD_CHECK_REAL("kv_stats", microdb_get_kv_stats(&g_db, &kvs));
+  RD_CHECK_REAL("ts_stats", microdb_get_ts_stats(&g_db, &tss));
+  RD_CHECK_REAL("rel_stats", microdb_get_rel_stats(&g_db, &rs));
+  RD_CHECK_REAL("eff_cap", microdb_get_effective_capacity(&g_db, &ec));
+  RD_CHECK_REAL("pressure", microdb_get_pressure(&g_db, &p));
+
+  MDB_CONSOLE.println("[REAL_DATA] PASS");
+  return true;
+
+rd_fail:
+  MDB_CONSOLE.printf("[REAL_DATA] FAIL: %s\n", first_fail != NULL ? first_fail : "unknown");
+  return false;
+
+#undef RD_CHECK_REAL
+#undef RD_EXPECT_REAL
+}
+
 static void run_full_bench_once(void) {
   bool ok;
   bool stage_flush = g_paced_mode || is_deterministic_profile();
@@ -924,6 +1045,7 @@ static void print_help(void) {
   MDB_CONSOLE.println("Commands:");
   MDB_CONSOLE.println("  help      - show commands");
   MDB_CONSOLE.println("  run       - run full benchmark suite (fresh DB)");
+  MDB_CONSOLE.println("  run_real  - run real-data integration smoke suite");
   MDB_CONSOLE.println("  kv/ts/rel/wal - run single benchmark stage");
   MDB_CONSOLE.println("  reopenchk - run reopen latency + integrity check");
   MDB_CONSOLE.println("  migrate   - run schema migration check");
@@ -985,6 +1107,8 @@ static void execute_command(char *line) {
     run_full_bench_once();
   } else if (strcmp(cmd, "run") == 0) {
     run_full_bench_once();
+  } else if (strcmp(cmd, "run_real") == 0) {
+    (void)run_real_data_suite();
   } else if (strcmp(cmd, "kv") == 0) {
     clear_metrics();
     MDB_CONSOLE.printf("[CHECK] KV benchmark: %s\n", run_kv_bench() ? "PASS" : "FAIL");
