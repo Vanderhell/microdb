@@ -130,3 +130,7 @@
    - avoid fixed `union raw[16]` cost for scalar streams
    - switched TS ring storage to per-stream byte stride (`sizeof(timestamp)+value_size`)
    - kept public API/sample type unchanged; WAL snapshot/recovery paths updated and passing
+7. [pending] TS adaptive arena partitioning by registered stream type:
+   - move from equal byte-slice per stream to weighted/adaptive TS arena distribution
+   - target better mixed-type utilization (`F32/I32/U32` alongside `RAW`)
+   - keep WAL/page format compatibility and deterministic capacity behavior

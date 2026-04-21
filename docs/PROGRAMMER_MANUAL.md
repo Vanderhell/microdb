@@ -101,6 +101,14 @@ Use for timestamped telemetry streams.
 - per-stream typed samples (`F32/I32/U32/RAW`)
 - timestamp range query APIs
 - overflow policy controlled at compile time
+- packed internal sample storage (`timestamp + value_size`) to reduce scalar stream footprint
+
+TS capacity note:
+
+- TS arena bytes are split evenly across `MICRODB_TS_MAX_STREAMS` slots.
+- Packed layout increases samples-per-stream according to stream value size.
+- With homogeneous scalar streams (for example all `F32`) this gives near-maximum gain.
+- With mixed stream types (`F32` + `RAW`), each stream still keeps an equal byte slice, so total gain is partial.
 
 ## 4.3 REL engine
 
@@ -310,6 +318,12 @@ if (microdb_txn_begin(&db) == MICRODB_OK) {
 - `MICRODB_TS_RAW`
 
 `microdb_ts_sample_t` holds timestamp + typed union payload.
+
+Storage/capacity behavior:
+
+- Public API remains `microdb_ts_sample_t` for compatibility.
+- Internal TS ring uses packed per-stream stride: `sizeof(timestamp) + value_size`.
+- Stream capacity is computed from that stride inside each stream's fixed byte slice.
 
 ### Callback type
 
