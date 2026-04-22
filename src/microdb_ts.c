@@ -210,7 +210,8 @@ static microdb_err_t microdb_ts_repartition(microdb_core_t *core) {
 static microdb_err_t microdb_ts_register_apply(microdb_core_t *core,
                                                const char *name,
                                                microdb_ts_type_t type,
-                                               size_t raw_size) {
+                                               size_t raw_size,
+                                               const microdb_ts_log_retain_cfg_t *cfg) {
     uint32_t i;
 
     if (microdb_ts_find(core, name) != NULL) {
@@ -227,6 +228,8 @@ static microdb_err_t microdb_ts_register_apply(microdb_core_t *core,
             memcpy(stream->name, name, strlen(name) + 1u);
             stream->type = type;
             stream->raw_size = (type == MICRODB_TS_RAW) ? raw_size : 0u;
+            stream->log_retain_zones = (cfg != NULL) ? cfg->log_retain_zones : 0u;
+            stream->log_retain_zone_pct = (cfg != NULL) ? cfg->log_retain_zone_pct : 0u;
             stream->sample_stride = microdb_ts_stride_for_type(stream->type, stream->raw_size);
             if (stream->sample_stride == 0u) {
                 return MICRODB_ERR_INVALID;
@@ -331,6 +334,92 @@ static void microdb_ts_downsample_oldest(microdb_ts_stream_t *stream) {
     stream->count--;
 }
 
+static void microdb_ts_merge_pair(microdb_ts_stream_t *stream,
+                                  uint32_t dst_idx,
+                                  uint32_t a_idx,
+                                  uint32_t b_idx) {
+    microdb_ts_sample_t a;
+    microdb_ts_sample_t b;
+
+    microdb_ts_read_sample(stream, a_idx, &a);
+    microdb_ts_read_sample(stream, b_idx, &b);
+    a.ts = (a.ts / 2u) + (b.ts / 2u);
+
+    if (stream->type == MICRODB_TS_F32) {
+        a.v.f32 = (a.v.f32 + b.v.f32) * 0.5f;
+    } else if (stream->type == MICRODB_TS_I32) {
+        a.v.i32 = (a.v.i32 / 2) + (b.v.i32 / 2);
+    } else if (stream->type == MICRODB_TS_U32) {
+        a.v.u32 = (a.v.u32 / 2u) + (b.v.u32 / 2u);
+    } else {
+        size_t i;
+        for (i = 0u; i < stream->raw_size; ++i) {
+            uint16_t merged = (uint16_t)a.v.raw[i] + (uint16_t)b.v.raw[i];
+            a.v.raw[i] = (uint8_t)(merged / 2u);
+        }
+    }
+    microdb_ts_write_sample(stream, dst_idx, &a);
+}
+
+static uint32_t microdb_ts_log_retain_apply(microdb_ts_stream_t *stream) {
+    uint32_t zone_size;
+    uint32_t read_pos;
+    uint32_t write_pos;
+    uint32_t removed;
+    uint32_t k;
+    uint32_t cap;
+    uint32_t count;
+    uint32_t tail;
+
+    if (stream->count == 0u || stream->capacity == 0u) {
+        return 0u;
+    }
+    zone_size = ((uint32_t)stream->capacity * (uint32_t)stream->log_retain_zone_pct) / 100u;
+    if (zone_size < 2u) {
+        zone_size = 2u;
+    }
+    if (zone_size > stream->count) {
+        zone_size = stream->count;
+    }
+
+    cap = stream->capacity;
+    count = stream->count;
+    tail = stream->tail;
+    read_pos = 0u;
+    write_pos = 0u;
+
+    while (read_pos + 1u < zone_size) {
+        uint32_t a_idx = (tail + read_pos) % cap;
+        uint32_t b_idx = (tail + read_pos + 1u) % cap;
+        uint32_t dst_idx = (tail + write_pos) % cap;
+        microdb_ts_merge_pair(stream, dst_idx, a_idx, b_idx);
+        read_pos += 2u;
+        write_pos += 1u;
+    }
+
+    if (read_pos < zone_size) {
+        uint32_t src_idx = (tail + read_pos) % cap;
+        uint32_t dst_idx = (tail + write_pos) % cap;
+        if (src_idx != dst_idx) {
+            microdb_ts_copy_sample_slot(stream, dst_idx, src_idx);
+        }
+        write_pos++;
+    }
+
+    removed = zone_size - write_pos;
+    for (k = zone_size; k < count; ++k) {
+        uint32_t src_idx = (tail + k) % cap;
+        uint32_t dst_idx = (tail + (k - removed)) % cap;
+        if (src_idx != dst_idx) {
+            microdb_ts_copy_sample_slot(stream, dst_idx, src_idx);
+        }
+    }
+
+    stream->count = count - removed;
+    stream->head = (stream->tail + stream->count) % cap;
+    return removed;
+}
+
 microdb_err_t microdb_ts_init(microdb_t *db) {
     microdb_core_t *core = microdb_core(db);
     uint32_t i;
@@ -347,13 +436,19 @@ microdb_err_t microdb_ts_init(microdb_t *db) {
 }
 
 #if MICRODB_ENABLE_TS
-microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_type_t type, size_t raw_size) {
+microdb_err_t microdb_ts_register_ex(microdb_t *db,
+                                     const char *name,
+                                     microdb_ts_type_t type,
+                                     size_t raw_size,
+                                     const microdb_ts_log_retain_cfg_t *cfg) {
     microdb_core_t *core;
     microdb_err_t err;
     microdb_err_t rc = MICRODB_OK;
     uint32_t before_registered = 0u;
     uint32_t restore_index = UINT32_MAX;
     microdb_ts_stream_t restore_stream;
+    microdb_ts_log_retain_cfg_t local_cfg;
+    const microdb_ts_log_retain_cfg_t *cfg_ptr = NULL;
 
     if (db == NULL) {
         return MICRODB_ERR_INVALID;
@@ -376,12 +471,24 @@ microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_ty
         goto unlock;
     }
 
+    memset(&local_cfg, 0, sizeof(local_cfg));
+    if (cfg != NULL && cfg->log_retain_zones != 0u) {
+        if (cfg->log_retain_zone_pct == 0u ||
+            ((uint32_t)cfg->log_retain_zones * (uint32_t)cfg->log_retain_zone_pct) > 100u ||
+            cfg->log_retain_zones < 2u) {
+            rc = MICRODB_ERR_INVALID;
+            goto unlock;
+        }
+        local_cfg = *cfg;
+        cfg_ptr = &local_cfg;
+    }
+
     if (core->wal_enabled && core->storage != NULL && !core->storage_loading && !core->wal_replaying) {
         rc = microdb_persist_ts_register(db, name, type, raw_size);
         if (rc != MICRODB_OK) {
             goto unlock;
         }
-        rc = microdb_ts_register_apply(core, name, type, raw_size);
+        rc = microdb_ts_register_apply(core, name, type, raw_size, cfg_ptr);
         goto unlock;
     }
 
@@ -397,7 +504,7 @@ microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_ty
             }
         }
     }
-    rc = microdb_ts_register_apply(core, name, type, raw_size);
+    rc = microdb_ts_register_apply(core, name, type, raw_size, cfg_ptr);
     if (rc != MICRODB_OK) {
         goto unlock;
     }
@@ -415,6 +522,10 @@ microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_ty
 unlock:
     MICRODB_UNLOCK(db);
     return rc;
+}
+
+microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_type_t type, size_t raw_size) {
+    return microdb_ts_register_ex(db, name, type, raw_size, NULL);
 }
 
 microdb_err_t microdb_ts_insert(microdb_t *db, const char *name, microdb_timestamp_t ts, const void *val) {
@@ -455,6 +566,11 @@ microdb_err_t microdb_ts_insert(microdb_t *db, const char *name, microdb_timesta
         goto unlock;
     }
 #elif MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_DOWNSAMPLE
+#elif MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_LOG_RETAIN
+    if (stream->count == stream->capacity &&
+        stream->log_retain_zones == 0u) {
+        core->ts_dropped_samples++;
+    }
 #endif
 
     memset(&sample, 0, sizeof(sample));
@@ -466,6 +582,10 @@ microdb_err_t microdb_ts_insert(microdb_t *db, const char *name, microdb_timesta
         if (stream->count == stream->capacity) {
             microdb_ts_downsample_oldest(stream);
             core->ts_dropped_samples++;
+        }
+#elif MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_LOG_RETAIN
+        if (stream->count == stream->capacity && stream->log_retain_zones > 0u) {
+            core->ts_dropped_samples += microdb_ts_log_retain_apply(stream);
         }
 #elif MICRODB_TS_OVERFLOW_POLICY == MICRODB_TS_POLICY_DROP_OLDEST
         if (stream->count == stream->capacity) {
@@ -748,6 +868,19 @@ microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_ty
     (void)name;
     (void)type;
     (void)raw_size;
+    return MICRODB_ERR_DISABLED;
+}
+
+microdb_err_t microdb_ts_register_ex(microdb_t *db,
+                                     const char *name,
+                                     microdb_ts_type_t type,
+                                     size_t raw_size,
+                                     const microdb_ts_log_retain_cfg_t *cfg) {
+    (void)db;
+    (void)name;
+    (void)type;
+    (void)raw_size;
+    (void)cfg;
     return MICRODB_ERR_DISABLED;
 }
 

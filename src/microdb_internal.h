@@ -48,6 +48,8 @@ typedef struct {
     char name[MICRODB_TS_STREAM_NAME_LEN];
     microdb_ts_type_t type;
     size_t raw_size;
+    uint8_t log_retain_zones;
+    uint8_t log_retain_zone_pct;
     uint32_t sample_stride;
     uint32_t head;
     uint32_t tail;

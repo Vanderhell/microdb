@@ -168,6 +168,7 @@
 #define MICRODB_TS_POLICY_DROP_OLDEST 0u
 #define MICRODB_TS_POLICY_REJECT 1u
 #define MICRODB_TS_POLICY_DOWNSAMPLE 2u
+#define MICRODB_TS_POLICY_LOG_RETAIN 3u
 #ifndef MICRODB_TS_OVERFLOW_POLICY
 #define MICRODB_TS_OVERFLOW_POLICY MICRODB_TS_POLICY_DROP_OLDEST
 #endif
@@ -462,6 +463,22 @@ typedef struct {
     } v;
 } microdb_ts_sample_t;
 
+typedef struct {
+    uint8_t kv_ok;
+    uint8_t ts_ok;
+    uint8_t rel_ok;
+    uint8_t wal_ok;
+    uint32_t kv_anomalies;
+    uint32_t ts_anomalies;
+    uint32_t rel_anomalies;
+    char first_anomaly[64];
+} microdb_selfcheck_result_t;
+
+typedef struct {
+    uint8_t log_retain_zones;
+    uint8_t log_retain_zone_pct;
+} microdb_ts_log_retain_cfg_t;
+
 microdb_err_t microdb_init(microdb_t *db, const microdb_cfg_t *cfg);
 microdb_err_t microdb_deinit(microdb_t *db);
 microdb_err_t microdb_flush(microdb_t *db);
@@ -473,6 +490,7 @@ microdb_err_t microdb_get_ts_stats(microdb_t *db, microdb_ts_stats_t *out);
 microdb_err_t microdb_get_rel_stats(microdb_t *db, microdb_rel_stats_t *out);
 microdb_err_t microdb_get_effective_capacity(microdb_t *db, microdb_effective_capacity_t *out);
 microdb_err_t microdb_get_pressure(microdb_t *db, microdb_pressure_t *out);
+microdb_err_t microdb_selfcheck(microdb_t *db, microdb_selfcheck_result_t *out);
 microdb_err_t microdb_admit_kv_set(microdb_t *db, const char *key, size_t val_len, microdb_admission_t *out);
 microdb_err_t microdb_admit_ts_insert(microdb_t *db, const char *stream_name, size_t sample_len, microdb_admission_t *out);
 microdb_err_t microdb_admit_rel_insert(microdb_t *db, const char *table_name, size_t row_len, microdb_admission_t *out);
@@ -499,6 +517,11 @@ microdb_err_t microdb_txn_rollback(microdb_t *db);
 
 typedef bool (*microdb_ts_query_cb_t)(const microdb_ts_sample_t *sample, void *ctx);
 microdb_err_t microdb_ts_register(microdb_t *db, const char *name, microdb_ts_type_t type, size_t raw_size);
+microdb_err_t microdb_ts_register_ex(microdb_t *db,
+                                     const char *name,
+                                     microdb_ts_type_t type,
+                                     size_t raw_size,
+                                     const microdb_ts_log_retain_cfg_t *cfg);
 microdb_err_t microdb_ts_insert(microdb_t *db, const char *name, microdb_timestamp_t ts, const void *val);
 microdb_err_t microdb_ts_last(microdb_t *db, const char *name, microdb_ts_sample_t *out);
 microdb_err_t microdb_ts_query(microdb_t *db, const char *name, microdb_timestamp_t from, microdb_timestamp_t to, microdb_ts_query_cb_t cb, void *ctx);

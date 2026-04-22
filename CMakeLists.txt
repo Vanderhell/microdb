@@ -318,6 +318,19 @@ create_microdb_profile_variant(microdb_profile_core_wal MICRODB_PROFILE_CORE_WAL
 create_microdb_profile_variant(microdb_profile_core_perf MICRODB_PROFILE_CORE_PERF)
 create_microdb_profile_variant(microdb_profile_core_himem MICRODB_PROFILE_CORE_HIMEM)
 
+add_library(microdb_ts_log_retain STATIC
+    src/microdb.c
+    src/microdb_kv.c
+    src/microdb_ts.c
+    src/microdb_rel.c
+    src/microdb_wal.c
+    src/microdb_crc.c
+    port/ram/microdb_port_ram.c
+    port/posix/microdb_port_posix.c
+)
+target_include_directories(microdb_ts_log_retain PUBLIC include port/ram port/posix PRIVATE src)
+target_compile_definitions(microdb_ts_log_retain PRIVATE MICRODB_TS_OVERFLOW_POLICY=MICRODB_TS_POLICY_LOG_RETAIN)
+
 if(MICRODB_BUILD_JSON_WRAPPER)
     add_library(microdb_json_wrapper STATIC src/modules/microdb_json_wrapper.c)
     target_include_directories(microdb_json_wrapper PUBLIC include PRIVATE src)
@@ -896,6 +909,33 @@ if(MICRODB_BUILD_TESTS)
         add_test(NAME test_safety_invariants COMMAND test_safety_invariants)
     else()
         message(STATUS "Skipping test_safety_invariants: missing tests/test_safety_invariants.c")
+    endif()
+
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_selfcheck.c")
+        add_executable(test_selfcheck tests/test_selfcheck.c)
+        target_include_directories(test_selfcheck PRIVATE include tests port/ram port/posix src)
+        target_link_libraries(test_selfcheck PRIVATE microdb)
+        add_test(NAME test_selfcheck COMMAND test_selfcheck)
+    else()
+        message(STATUS "Skipping test_selfcheck: missing tests/test_selfcheck.c")
+    endif()
+
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_wcet_bounds.c")
+        add_executable(test_wcet_bounds tests/test_wcet_bounds.c)
+        target_include_directories(test_wcet_bounds PRIVATE include tests port/ram port/posix src)
+        target_link_libraries(test_wcet_bounds PRIVATE microdb)
+        add_test(NAME test_wcet_bounds COMMAND test_wcet_bounds)
+    else()
+        message(STATUS "Skipping test_wcet_bounds: missing tests/test_wcet_bounds.c")
+    endif()
+
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ts_log_retain.c")
+        add_executable(test_ts_log_retain tests/test_ts_log_retain.c)
+        target_include_directories(test_ts_log_retain PRIVATE include tests port/ram port/posix src)
+        target_link_libraries(test_ts_log_retain PRIVATE microdb_ts_log_retain)
+        add_test(NAME test_ts_log_retain COMMAND test_ts_log_retain)
+    else()
+        message(STATUS "Skipping test_ts_log_retain: missing tests/test_ts_log_retain.c")
     endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/worstcase_matrix_runner.c")

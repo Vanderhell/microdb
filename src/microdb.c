@@ -4,6 +4,7 @@
 
 #include "microdb_arena.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,6 +29,21 @@ static uint8_t *microdb_align_ptr(uint8_t *ptr, size_t align) {
     uintptr_t p = (uintptr_t)ptr;
     uintptr_t a = (p + (uintptr_t)(align - 1u)) & ~((uintptr_t)align - 1u);
     return (uint8_t *)a;
+}
+
+static uint32_t microdb_popcount8(uint8_t v) {
+    uint32_t c = 0u;
+    while (v != 0u) {
+        c += (uint32_t)(v & 1u);
+        v >>= 1u;
+    }
+    return c;
+}
+
+static void microdb_selfcheck_set_first(microdb_selfcheck_result_t *out, const char *msg) {
+    if (out != NULL && out->first_anomaly[0] == '\0' && msg != NULL) {
+        (void)snprintf(out->first_anomaly, sizeof(out->first_anomaly), "%s", msg);
+    }
 }
 
 const char *microdb_err_to_string(microdb_err_t err) {
@@ -774,6 +790,182 @@ microdb_err_t microdb_get_pressure(microdb_t *db, microdb_pressure_t *out) {
     out->near_full_risk_pct = (uint8_t)max_risk;
 
     MICRODB_UNLOCK(db);
+    return MICRODB_OK;
+}
+
+microdb_err_t microdb_selfcheck(microdb_t *db, microdb_selfcheck_result_t *out) {
+    microdb_core_t *core;
+    microdb_err_t status;
+    uint32_t i;
+    uint8_t wal_ok = 1u;
+
+    if (db == NULL || out == NULL) {
+        return MICRODB_ERR_INVALID;
+    }
+
+    status = microdb_validate_handle(db);
+    if (status != MICRODB_OK) {
+        return status;
+    }
+
+    MICRODB_LOCK(db);
+    core = microdb_core(db);
+    if (core->magic != MICRODB_MAGIC) {
+        MICRODB_UNLOCK(db);
+        return MICRODB_ERR_INVALID;
+    }
+
+    memset(out, 0, sizeof(*out));
+    out->kv_ok = 1u;
+    out->ts_ok = 1u;
+    out->rel_ok = 1u;
+    out->wal_ok = 1u;
+
+    {
+        uint32_t live_count = 0u;
+        uint32_t live_value_bytes = 0u;
+
+        for (i = 0u; i < core->kv.bucket_count; ++i) {
+            const microdb_kv_bucket_t *b = &core->kv.buckets[i];
+            if (b->state != 1u) {
+                continue;
+            }
+            live_count++;
+            live_value_bytes += b->val_len;
+            if (b->val_offset + b->val_len > core->kv.value_capacity) {
+                out->kv_anomalies++;
+                out->kv_ok = 0u;
+                microdb_selfcheck_set_first(out, "kv: value range out of capacity");
+            }
+        }
+        if (live_count != core->kv.entry_count) {
+            out->kv_anomalies++;
+            out->kv_ok = 0u;
+            microdb_selfcheck_set_first(out, "kv: entry_count mismatch");
+        }
+        if (live_value_bytes != core->kv.live_value_bytes) {
+            out->kv_anomalies++;
+            out->kv_ok = 0u;
+            microdb_selfcheck_set_first(out, "kv: live_value_bytes mismatch");
+        }
+        for (i = 0u; i < core->kv.bucket_count; ++i) {
+            const microdb_kv_bucket_t *a = &core->kv.buckets[i];
+            uint32_t j;
+            if (a->state != 1u || a->val_len == 0u) {
+                continue;
+            }
+            for (j = i + 1u; j < core->kv.bucket_count; ++j) {
+                const microdb_kv_bucket_t *b = &core->kv.buckets[j];
+                uint32_t a0;
+                uint32_t a1;
+                uint32_t b0;
+                uint32_t b1;
+                if (b->state != 1u || b->val_len == 0u) {
+                    continue;
+                }
+                a0 = a->val_offset;
+                a1 = a->val_offset + a->val_len;
+                b0 = b->val_offset;
+                b1 = b->val_offset + b->val_len;
+                if (a0 < b1 && b0 < a1) {
+                    out->kv_anomalies++;
+                    out->kv_ok = 0u;
+                    microdb_selfcheck_set_first(out, "kv: overlapping value ranges");
+                }
+            }
+        }
+    }
+
+#if MICRODB_ENABLE_TS
+    {
+        uint32_t registered = 0u;
+        for (i = 0u; i < MICRODB_TS_MAX_STREAMS; ++i) {
+            const microdb_ts_stream_t *s = &core->ts.streams[i];
+            if (!s->registered) {
+                continue;
+            }
+            registered++;
+            if (s->count > s->capacity) {
+                out->ts_anomalies++;
+                out->ts_ok = 0u;
+                microdb_selfcheck_set_first(out, "ts: count > capacity");
+            }
+            if (s->count > 0u && s->head >= s->capacity) {
+                out->ts_anomalies++;
+                out->ts_ok = 0u;
+                microdb_selfcheck_set_first(out, "ts: head out of range");
+            }
+        }
+        if (registered != core->ts.registered_streams) {
+            out->ts_anomalies++;
+            out->ts_ok = 0u;
+            microdb_selfcheck_set_first(out, "ts: registered stream count mismatch");
+        }
+    }
+#endif
+
+#if MICRODB_ENABLE_REL
+    {
+        uint32_t registered_tables = 0u;
+        for (i = 0u; i < MICRODB_REL_MAX_TABLES; ++i) {
+            const microdb_table_t *t = &core->rel.tables[i];
+            uint32_t alive = 0u;
+            uint32_t b;
+            if (!t->registered) {
+                continue;
+            }
+            registered_tables++;
+            for (b = 0u; b < (t->max_rows + 7u) / 8u; ++b) {
+                alive += microdb_popcount8(t->alive_bitmap[b]);
+            }
+            if (alive != t->live_count) {
+                out->rel_anomalies++;
+                out->rel_ok = 0u;
+                microdb_selfcheck_set_first(out, "rel: live_count bitmap mismatch");
+            }
+            if (t->index_count > t->live_count) {
+                out->rel_anomalies++;
+                out->rel_ok = 0u;
+                microdb_selfcheck_set_first(out, "rel: index_count > live_count");
+            }
+            if (t->index_count > 1u && t->index != NULL && t->index_key_size > 0u) {
+                uint32_t k;
+                for (k = 1u; k < t->index_count; ++k) {
+                    const uint8_t *prev = t->index[k - 1u].key_bytes;
+                    const uint8_t *cur = t->index[k].key_bytes;
+                    if (memcmp(prev, cur, t->index_key_size) > 0) {
+                        out->rel_anomalies++;
+                        out->rel_ok = 0u;
+                        microdb_selfcheck_set_first(out, "rel: index not sorted");
+                        break;
+                    }
+                }
+            }
+        }
+        if (registered_tables != core->rel.registered_tables) {
+            out->rel_anomalies++;
+            out->rel_ok = 0u;
+            microdb_selfcheck_set_first(out, "rel: registered table count mismatch");
+        }
+    }
+#endif
+
+    if (core->magic != MICRODB_MAGIC) {
+        wal_ok = 0u;
+        out->wal_ok = 0u;
+        microdb_selfcheck_set_first(out, "wal: invalid handle magic");
+    }
+    if (core->wal_enabled && core->wal_used > core->layout.wal_size) {
+        wal_ok = 0u;
+        out->wal_ok = 0u;
+        microdb_selfcheck_set_first(out, "wal: wal_used exceeds wal_size");
+    }
+
+    MICRODB_UNLOCK(db);
+
+    if (out->kv_anomalies > 0u || out->ts_anomalies > 0u || out->rel_anomalies > 0u || wal_ok == 0u) {
+        return MICRODB_ERR_CORRUPT;
+    }
     return MICRODB_OK;
 }
 
