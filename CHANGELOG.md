@@ -6,6 +6,27 @@ The format is inspired by Keep a Changelog and follows semantic versioning inten
 
 ## [Unreleased]
 
+### Added
+
+- Free-tier core additions (MIT):
+  - `microdb_selfcheck()` API + runtime structural checks for KV/TS/REL/WAL.
+  - WCET package:
+    - `include/microdb_wcet.h` compile-time bound macros,
+    - `docs/WCET_ANALYSIS.md` methodology and per-API formulas,
+    - `tests/test_wcet_bounds.c` verification coverage.
+  - TS logarithmic retention support:
+    - new policy constant `MICRODB_TS_POLICY_LOG_RETAIN`,
+    - extended registration API `microdb_ts_register_ex(...)`,
+    - stream-level log-retain config (`zones`/`zone_pct`),
+    - dedicated tests in `tests/test_ts_log_retain.c`.
+  - New self-check coverage in `tests/test_selfcheck.c`.
+
+### Changed
+
+- Build/test wiring:
+  - registered `test_selfcheck`, `test_wcet_bounds`, and `test_ts_log_retain` in CMake.
+  - added dedicated `microdb_ts_log_retain` test library target so default TS policy behavior remains unchanged.
+
 ## [1.3.6] - 2026-04-22
 
 ### Added

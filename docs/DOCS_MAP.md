@@ -17,6 +17,8 @@ This page is the central navigation entry for `microdb` docs.
 - `docs/FOOTPRINT_MIN_CONTRACT.md`
 - `docs/OFFLINE_VERIFIER.md`
 - `docs/CORE_INVARIANTS.md`
+- `docs/WCET_ANALYSIS.md`
+- `docs/SAFETY_READINESS.md`
 
 ## Integration Docs
 
@@ -50,4 +52,3 @@ This page is the central navigation entry for `microdb` docs.
 - `SECURITY.md`
 - `CODE_OF_CONDUCT.md`
 - `SUPPORT.md`
-

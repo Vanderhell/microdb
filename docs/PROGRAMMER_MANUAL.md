@@ -282,6 +282,7 @@ Inspectable aggregate snapshot helper.
 - `microdb_get_rel_stats`
 - `microdb_get_effective_capacity`
 - `microdb_get_pressure`
+- `microdb_selfcheck`
 
 ### Admission/preflight helpers
 
@@ -379,12 +380,18 @@ typedef bool (*microdb_ts_query_cb_t)(const microdb_ts_sample_t *sample, void *c
 ### Functions
 
 - `microdb_ts_register(db, name, type, raw_size)`
+- `microdb_ts_register_ex(db, name, type, raw_size, cfg)`
 - `microdb_ts_insert(db, name, ts, val)`
 - `microdb_ts_last(db, name, out)`
 - `microdb_ts_query(db, name, from, to, cb, ctx)`
 - `microdb_ts_query_buf(db, name, from, to, buf, max_count, out_count)`
 - `microdb_ts_count(db, name, from, to, out_count)`
 - `microdb_ts_clear(db, name)`
+
+Overflow policy note:
+
+- In addition to DROP/REJECT/DOWNSAMPLE, builds can enable `MICRODB_TS_POLICY_LOG_RETAIN`.
+- `microdb_ts_register_ex` allows per-stream logarithmic retention zone configuration.
 
 TS lifecycle limitation:
 
@@ -725,3 +732,5 @@ Recommended callback behavior:
 - `docs/THREAD_SAFETY.md`
 - `docs/FS_BLOCK_ADAPTER_CONTRACT.md`
 - `docs/FREE_EDITION_LICENSING.md`
+- `docs/WCET_ANALYSIS.md`
+- `docs/SAFETY_READINESS.md`

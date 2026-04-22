@@ -28,6 +28,16 @@ It combines three storage models behind one API surface:
 The library allocates exactly once in `microdb_init()`, runs without external dependencies,
 and can operate either in RAM-only mode or with a storage HAL for persistence and WAL recovery.
 
+## Free-tier additions (latest)
+
+- Runtime integrity API: `microdb_selfcheck(...)`
+- WCET package:
+  - compile-time bounds: `include/microdb_wcet.h`
+  - analysis guide: `docs/WCET_ANALYSIS.md`
+- TS logarithmic retention:
+  - policy: `MICRODB_TS_POLICY_LOG_RETAIN`
+  - extended registration: `microdb_ts_register_ex(...)`
+
 ## Product Contract
 
 - Positioning: see [PRODUCT_POSITIONING.md](docs/PRODUCT_POSITIONING.md)
@@ -36,6 +46,8 @@ and can operate either in RAM-only mode or with a storage HAL for persistence an
 - Fail-code contract: see [FAIL_CODE_CONTRACT.md](docs/FAIL_CODE_CONTRACT.md)
 - Runtime error text helper: `microdb_err_to_string(microdb_err_t)`
 - Offline verifier contract: see [OFFLINE_VERIFIER.md](docs/OFFLINE_VERIFIER.md)
+- WCET analysis: see [WCET_ANALYSIS.md](docs/WCET_ANALYSIS.md)
+- Safety readiness package: see [SAFETY_READINESS.md](docs/SAFETY_READINESS.md)
 - Footprint-min contract: see [FOOTPRINT_MIN_CONTRACT.md](docs/FOOTPRINT_MIN_CONTRACT.md)
 - Latest hard verdict: see [hard_verdict_20260412.md](docs/results/hard_verdict_20260412.md)
 - Getting started (5 min): see [GETTING_STARTED_5_MIN.md](docs/GETTING_STARTED_5_MIN.md)
@@ -206,7 +218,8 @@ The time-series engine stores named streams of `F32`, `I32`, `U32`, or raw sampl
 
 - one ring buffer per registered stream
 - range queries by timestamp
-- overflow policies: drop oldest, reject, or downsample
+- overflow policies: drop oldest, reject, downsample, or logarithmic retain
+- per-stream extended registration via `microdb_ts_register_ex(...)`
 - WAL-backed persistence for inserts and stream metadata
 
 ## Relational engine
@@ -317,6 +330,7 @@ System stats are exposed through read-only APIs (not user KV keys):
 - `microdb_get_rel_stats(...)`
 - `microdb_get_effective_capacity(...)`
 - `microdb_get_pressure(...)`
+- `microdb_selfcheck(...)`
 - `microdb_admit_kv_set(...)`
 - `microdb_admit_ts_insert(...)`
 - `microdb_admit_rel_insert(...)`

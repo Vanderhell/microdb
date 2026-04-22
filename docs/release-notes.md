@@ -1,46 +1,47 @@
-# Release Notes
+# Release Notes Draft (Next Release)
 
 ## Title
 
-`microdb v1.3.0`
+`microdb v1.3.7`
 
 ## Release text (GitHub Release body)
 
-This release focuses on production hardening for ESP32-class deployments and closes the remaining correctness gaps found during real-data validation.
+This release expands the free MIT core with runtime integrity checks, WCET
+documentation/bounds, and logarithmic time-series retention.
 
 Highlights:
 
-- Fixed KV JSON import/export TTL sentinel handling for non-expiring keys (`ttl=0` round-trip).
-- Fixed KV admission preflight complexity (`microdb_admit_kv_set`) from O(n) scan to O(1) counter path.
-- Added/expanded real-data integration coverage (host + ESP32 `run_real` smoke flow).
-- Added explicit WAL sync-mode guidance with measured ESP32 values.
-- Improved benchmark interpretation docs (POSIX vs ESP32 behavior).
-- Cleaned repository history from tracked ESP32 build artifacts.
+- Added `microdb_selfcheck()` to validate internal KV/TS/REL/WAL invariants at runtime.
+- Added WCET package:
+  - `include/microdb_wcet.h`
+  - `docs/WCET_ANALYSIS.md`
+  - `tests/test_wcet_bounds.c`
+- Added TS logarithmic retention path:
+  - `MICRODB_TS_POLICY_LOG_RETAIN`
+  - `microdb_ts_register_ex(...)`
+  - per-stream log-retain zone configuration.
+- Added dedicated test coverage:
+  - `tests/test_selfcheck.c`
+  - `tests/test_wcet_bounds.c`
+  - `tests/test_ts_log_retain.c`
 
-Real hardware validation (ESP32-S3, COM17):
+Validation summary:
 
-- `[REAL_DATA] PASS` end-to-end flow.
-- Lifecycle cost measured in flow:
-  - `flush` ~7033us
-  - `deinit` ~7198us
-  - `reinit` ~9716us
-- `admit_kv_set` reduced from ~498us to ~190us after O(1) fix.
-
-Known non-blocking follow-ups:
-
-- TS adaptive arena for mixed stream types.
-- POSIX benchmark fidelity improvements (`writev`/noise control).
-- RTOS port documentation polish (FreeRTOS/Zephyr).
+- New suites pass:
+  - `test_selfcheck`
+  - `test_wcet_bounds`
+  - `test_ts_log_retain`
+- Full preset regression remained green after integration.
 
 ## Contract links
 
 - `README.md`
 - `CHANGELOG.md`
 - `RELEASE_LOG.md`
-- `docs/GETTING_STARTED_5_MIN.md`
-- `docs/FAIL_CODE_CONTRACT.md`
-- `docs/PROFILE_GUARANTEES.md`
+- `docs/WCET_ANALYSIS.md`
+- `docs/SAFETY_READINESS.md`
 - `docs/OFFLINE_VERIFIER.md`
+- `docs/PROFILE_GUARANTEES.md`
 
 ## Repository topics reference
 

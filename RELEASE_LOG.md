@@ -5,7 +5,25 @@ For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Unreleased
 
-- No pending release notes.
+### Highlights
+
+- Added free-tier runtime integrity API `microdb_selfcheck()` with anomaly counters and first-anomaly string.
+- Added WCET deliverables for integrators:
+  - `include/microdb_wcet.h` bounds,
+  - `docs/WCET_ANALYSIS.md` formulas and measurement guide,
+  - `tests/test_wcet_bounds.c` coverage.
+- Added TS logarithmic retention feature set:
+  - `MICRODB_TS_POLICY_LOG_RETAIN`,
+  - `microdb_ts_register_ex(...)`,
+  - per-stream zone configuration and validation tests.
+
+### Validation
+
+- New suites are green in CI preset validation:
+  - `test_selfcheck`
+  - `test_wcet_bounds`
+  - `test_ts_log_retain`
+- Full Windows preset regression remains passing after integration.
 
 ## v1.3.5 - 2026-04-22
 
