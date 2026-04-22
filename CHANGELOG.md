@@ -6,6 +6,40 @@ The format is inspired by Keep a Changelog and follows semantic versioning inten
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-04-22
+
+### Added
+
+- Offline verifier quality package:
+  - deep decode passes for KV/TS/REL pages with warning surfacing.
+  - WAL semantic summary counters (including orphaned TXN markers).
+  - strict `--check` mode for CI gating.
+- New coverage:
+  - `tests/test_offline_verifier.c` extended with corruption/recovery/JSON/check-flag scenarios.
+  - `tests/test_capacity_estimator_model.c` for capacity-model consistency checks.
+  - `tests/test_safety_invariants.c` for safety-critical invariants (magic clear, WAL replay boundary, superblock switch, null-handle contract).
+- Certification readiness artifacts:
+  - `docs/SAFETY_READINESS.md`
+  - `scripts/run_static_analysis.sh`
+
+### Changed
+
+- `tools/microdb_capacity_estimator.html` rewritten as single-file real-time planner:
+  - preset-driven inputs (FOOTPRINT_MIN, CORE_MIN, CORE_WAL, CORE_PERF, CORE_HIMEM, Custom),
+  - RAM/storage/wear outputs,
+  - CMake define snippet generation,
+  - formula comments tied to source files.
+- `docs/PROGRAMMER_MANUAL.md` expanded with Capacity Planning section.
+- CI workflow enriched with:
+  - verifier integration smoke step (Linux build lane),
+  - non-blocking static-analysis job with artifact upload.
+
+### Fixed
+
+- Windows subprocess quoting and WAL entry construction in `tests/test_offline_verifier.c`:
+  - stable verifier invocation on Windows (`cmd /c` quoting),
+  - orphaned TXN WAL test now writes valid `data_len` in entry header.
+
 ## [1.3.5] - 2026-04-22
 
 ### Changed

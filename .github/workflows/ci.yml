@@ -35,6 +35,11 @@ jobs:
         run: cmake --build --preset ${{ matrix.preset }}
       - name: Test
         run: ctest --preset ${{ matrix.preset }}
+      - name: Verifier integration smoke
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cmake --build --preset ${{ matrix.preset }} --target microdb_verify
+          ctest --preset ${{ matrix.preset }} -R test_offline_verifier -V
 
   sanitize-linux:
     runs-on: ubuntu-latest
@@ -51,3 +56,19 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ctest --preset ci-asan-ubsan-linux --output-on-failure --stop-on-failure -V
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: Run static analysis
+        run: bash scripts/run_static_analysis.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-report
+          path: docs/results/cppcheck_report.txt
