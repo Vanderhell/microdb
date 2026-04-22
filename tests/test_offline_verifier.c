@@ -350,7 +350,17 @@ static void corrupt_kv_overlap(const char *path) {
         uint32_t val_len_off;
         ASSERT_EQ(read_at(fp, page + 32u, payload, sizeof(payload)), 1);
         key_len = payload[0];
+        if (key_len > 48u) {
+            /* Keep mutation deterministic under ASan/UBSan even on sparse payloads. */
+            payload[0] = 2u;
+            payload[1] = 'k';
+            payload[2] = 'x';
+            key_len = 2u;
+        }
         val_len_off = 1u + (uint32_t)key_len;
+        if (val_len_off + 4u > sizeof(payload)) {
+            val_len_off = 3u;
+        }
         put_u32(payload + val_len_off, 0xFFFFFFF0u);
         ASSERT_EQ(write_at(fp, page + 32u, payload, sizeof(payload)), 1);
         ASSERT_EQ(patch_page_crc(fp, page), 1);

@@ -1452,14 +1452,14 @@ static microdb_err_t microdb_replay_wal(microdb_t *db, bool *out_had_entries, bo
     }
 
     if (microdb_get_u32(header + 0u) != MICRODB_WAL_MAGIC) {
-        MICRODB_LOG("ERROR", "WAL header corrupt: resetting WAL");
+        MICRODB_LOG("ERROR", "%s", "WAL header corrupt: resetting WAL");
         *out_header_reset = true;
         return MICRODB_OK;
     }
 
     stored_crc = microdb_get_u32(header + 16u);
     if (MICRODB_CRC32(header, 16u) != stored_crc) {
-        MICRODB_LOG("ERROR", "WAL header corrupt: resetting WAL");
+        MICRODB_LOG("ERROR", "%s", "WAL header corrupt: resetting WAL");
         *out_header_reset = true;
         return MICRODB_OK;
     }
@@ -1702,11 +1702,11 @@ microdb_err_t microdb_storage_bootstrap(microdb_t *db) {
         return MICRODB_OK;
     }
     if (core->storage->erase_size == 0u) {
-        MICRODB_LOG("ERROR", "Storage contract violation: erase_size must be > 0");
+        MICRODB_LOG("ERROR", "%s", "Storage contract violation: erase_size must be > 0");
         return MICRODB_ERR_INVALID;
     }
     if (core->storage->write_size == 0u) {
-        MICRODB_LOG("ERROR", "Storage contract violation: write_size must be 1 (got 0)");
+        MICRODB_LOG("ERROR", "%s", "Storage contract violation: write_size must be 1 (got 0)");
         return MICRODB_ERR_INVALID;
     }
     if (core->storage->write_size != 1u) {
