@@ -37,6 +37,33 @@ foreach(LINE IN LISTS MAP_LINES)
   endif()
 endforeach()
 
+if(TEXT_VS EQUAL 0 AND RDATA_VS EQUAL 0 AND DATA_INIT EQUAL 0 AND BSS_VS EQUAL 0)
+  execute_process(
+    COMMAND size -A "${EXE}"
+    OUTPUT_VARIABLE SIZE_OUT
+    ERROR_VARIABLE SIZE_ERR
+    RESULT_VARIABLE SIZE_RC
+  )
+  if(SIZE_RC EQUAL 0)
+    string(REPLACE "\r\n" "\n" SIZE_OUT "${SIZE_OUT}")
+    string(REPLACE "\n" ";" SIZE_LINES "${SIZE_OUT}")
+    foreach(SLINE IN LISTS SIZE_LINES)
+      string(STRIP "${SLINE}" SLINE)
+      if(SLINE MATCHES "^\\.text[ ]+([0-9]+)$")
+        math(EXPR TEXT_VS "${TEXT_VS} + ${CMAKE_MATCH_1}")
+      elseif(SLINE MATCHES "^\\.rodata[ ]+([0-9]+)$")
+        math(EXPR RDATA_VS "${RDATA_VS} + ${CMAKE_MATCH_1}")
+      elseif(SLINE MATCHES "^\\.data[ ]+([0-9]+)$")
+        math(EXPR DATA_INIT "${DATA_INIT} + ${CMAKE_MATCH_1}")
+      elseif(SLINE MATCHES "^\\.bss[ ]+([0-9]+)$")
+        math(EXPR BSS_VS "${BSS_VS} + ${CMAKE_MATCH_1}")
+      endif()
+    endforeach()
+  else()
+    message(FATAL_ERROR "Unable to parse sections from MAP or size -A. size error: ${SIZE_ERR}")
+  endif()
+endif()
+
 set(BSS_TOTAL ${BSS_VS})
 
 message(STATUS "footprint_min sections: .text=${TEXT_VS} .rdata=${RDATA_VS} .data=${DATA_INIT} .bss=${BSS_TOTAL}")
@@ -57,29 +84,27 @@ endif()
 
 string(TOLOWER "${MAP_CONTENT}" MAP_CONTENT_LOWER)
 
-set(FORBIDDEN_OBJS
-  "microdb_ts.obj"
-  "microdb_rel.obj"
-  "microdb_verify.obj"
-  "soak_runner.obj"
-  "worstcase_matrix_runner.obj"
+set(FORBIDDEN_PATTERNS
+  "microdb_ts(\\.c)?\\.(obj|o)"
+  "microdb_rel(\\.c)?\\.(obj|o)"
+  "microdb_verify(\\.c)?\\.(obj|o)"
+  "soak_runner(\\.c)?\\.(obj|o)"
+  "worstcase_matrix_runner(\\.c)?\\.(obj|o)"
 )
-foreach(OBJ IN LISTS FORBIDDEN_OBJS)
-  string(FIND "${MAP_CONTENT_LOWER}" "${OBJ}" POS)
-  if(NOT POS EQUAL -1)
-    message(FATAL_ERROR "linkage audit failed: forbidden object linked: ${OBJ}")
+foreach(PAT IN LISTS FORBIDDEN_PATTERNS)
+  if(MAP_CONTENT_LOWER MATCHES "${PAT}")
+    message(FATAL_ERROR "linkage audit failed: forbidden object linked (pattern): ${PAT}")
   endif()
 endforeach()
 
-set(REQUIRED_OBJS
-  "microdb.obj"
-  "microdb_kv.obj"
-  "microdb_wal.obj"
-  "microdb_crc.obj"
+set(REQUIRED_PATTERNS
+  "microdb(\\.c)?\\.(obj|o)"
+  "microdb_kv(\\.c)?\\.(obj|o)"
+  "microdb_wal(\\.c)?\\.(obj|o)"
+  "microdb_crc(\\.c)?\\.(obj|o)"
 )
-foreach(OBJ IN LISTS REQUIRED_OBJS)
-  string(FIND "${MAP_CONTENT_LOWER}" "${OBJ}" POS)
-  if(POS EQUAL -1)
-    message(FATAL_ERROR "linkage audit failed: required object missing: ${OBJ}")
+foreach(PAT IN LISTS REQUIRED_PATTERNS)
+  if(NOT MAP_CONTENT_LOWER MATCHES "${PAT}")
+    message(FATAL_ERROR "linkage audit failed: required object missing (pattern): ${PAT}")
   endif()
 endforeach()
