@@ -6,7 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <process.h>
+#else
 #include <sys/wait.h>
 #endif
 
@@ -36,13 +38,71 @@ static int normalize_system_exit(int rc) {
 #endif
 }
 
+static void strip_outer_quotes(char *s) {
+    size_t len;
+    if (s == NULL || s[0] == '\0') {
+        return;
+    }
+    len = strlen(s);
+    if (len == 0u) {
+        return;
+    }
+    if (s[0] == '"' || s[0] == '\'') {
+        memmove(s, s + 1, len);
+        len = strlen(s);
+    }
+    if (len > 0u && (s[len - 1u] == '"' || s[len - 1u] == '\'')) {
+        s[len - 1u] = '\0';
+    }
+}
+
 static void set_verify_tool_path(const char *argv0) {
+#ifdef MICRODB_VERIFY_TOOL_PATH
     (void)argv0;
     memset(g_verify_tool, 0, sizeof(g_verify_tool));
-#ifdef _WIN32
-    (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "Debug\\microdb_verify.exe");
+    (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "%s", MICRODB_VERIFY_TOOL_PATH);
+    strip_outer_quotes(g_verify_tool);
+    return;
 #else
-    (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "./microdb_verify");
+    const char *slash = NULL;
+    size_t dir_len = 0u;
+    memset(g_verify_tool, 0, sizeof(g_verify_tool));
+    if (argv0 == NULL || argv0[0] == '\0') {
+#ifdef _WIN32
+        (void)snprintf(g_verify_tool, sizeof(g_verify_tool), ".\\microdb_verify.exe");
+#else
+        (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "./microdb_verify");
+#endif
+        return;
+    }
+
+    slash = strrchr(argv0, '/');
+#ifdef _WIN32
+    {
+        const char *backslash = strrchr(argv0, '\\');
+        if (backslash != NULL && (slash == NULL || backslash > slash)) {
+            slash = backslash;
+        }
+    }
+#endif
+    if (slash != NULL) {
+        dir_len = (size_t)(slash - argv0);
+    }
+    if (dir_len == 0u) {
+        dir_len = 1u;
+        g_verify_tool[0] = '.';
+    } else if (dir_len < sizeof(g_verify_tool)) {
+        memcpy(g_verify_tool, argv0, dir_len);
+    } else {
+        dir_len = sizeof(g_verify_tool) - 1u;
+        memcpy(g_verify_tool, argv0, dir_len);
+    }
+#ifdef _WIN32
+    (void)snprintf(g_verify_tool + dir_len, sizeof(g_verify_tool) - dir_len, "\\microdb_verify.exe");
+#else
+    (void)snprintf(g_verify_tool + dir_len, sizeof(g_verify_tool) - dir_len, "/microdb_verify");
+#endif
+    strip_outer_quotes(g_verify_tool);
 #endif
 }
 
@@ -79,15 +139,40 @@ static void compute_layout_32kb(verifier_layout_t *out) {
 }
 
 static int run_verify(const char *path) {
+#ifdef _WIN32
+    const char *args[] = {
+        g_verify_tool,
+        "--image",
+        path,
+        "--ram-kb",
+        "32",
+        "--kv-pct",
+        "40",
+        "--ts-pct",
+        "40",
+        "--rel-pct",
+        "20",
+        "--erase-size",
+        "256",
+        "--json",
+        NULL
+    };
+    intptr_t rc = _spawnv(_P_WAIT, g_verify_tool, args);
+    if (rc < 0) {
+        return 1;
+    }
+    return (int)rc;
+#else
     char cmd[1200];
     int rc;
     (void)snprintf(cmd,
                    sizeof(cmd),
-                   "%s --image \"%s\" --ram-kb 32 --kv-pct 40 --ts-pct 40 --rel-pct 20 --erase-size 256 --json",
+                   "\"%s\" --image \"%s\" --ram-kb 32 --kv-pct 40 --ts-pct 40 --rel-pct 20 --erase-size 256 --json",
                    g_verify_tool,
                    path);
     rc = system(cmd);
     return normalize_system_exit(rc);
+#endif
 }
 
 static void create_uninitialized_image(const char *path, uint32_t capacity) {

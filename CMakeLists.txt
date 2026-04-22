@@ -821,11 +821,18 @@ if(MICRODB_BUILD_TESTS)
         add_executable(test_footprint_min_baseline tests/footprint_min_baseline.c)
         target_include_directories(test_footprint_min_baseline PRIVATE include tests port/ram port/posix src)
         target_link_libraries(test_footprint_min_baseline PRIVATE microdb_footprint_min)
+        set(_footprint_map "$<TARGET_FILE_DIR:test_footprint_min_baseline>/test_footprint_min_baseline.map")
         if(MSVC)
             target_link_options(
                 test_footprint_min_baseline
                 PRIVATE
-                    "/MAP:$<TARGET_FILE_DIR:test_footprint_min_baseline>/test_footprint_min_baseline.map"
+                    "/MAP:${_footprint_map}"
+            )
+        else()
+            target_link_options(
+                test_footprint_min_baseline
+                PRIVATE
+                    "-Wl,-Map,${_footprint_map}"
             )
         endif()
         add_test(NAME test_footprint_min_baseline COMMAND test_footprint_min_baseline)
@@ -835,7 +842,7 @@ if(MICRODB_BUILD_TESTS)
                 NAME test_footprint_min_size_gate_release
                 COMMAND ${CMAKE_COMMAND}
                     -DEXE=$<TARGET_FILE:test_footprint_min_baseline>
-                    -DMAP=$<TARGET_FILE_DIR:test_footprint_min_baseline>/test_footprint_min_baseline.map
+                    -DMAP=${_footprint_map}
                     -DLLVM_READOBJ=${MICRODB_LLVM_READOBJ}
                     -DMAX_TEXT=25000
                     -DMAX_RODATA=1600
@@ -856,6 +863,11 @@ if(MICRODB_BUILD_TESTS)
             add_executable(test_offline_verifier tests/test_offline_verifier.c)
             target_include_directories(test_offline_verifier PRIVATE include tests port/ram port/posix src)
             target_link_libraries(test_offline_verifier PRIVATE microdb)
+            target_compile_definitions(
+                test_offline_verifier
+                PRIVATE
+                    MICRODB_VERIFY_TOOL_PATH="$<TARGET_FILE:microdb_verify>"
+            )
             add_test(NAME test_offline_verifier COMMAND test_offline_verifier)
         else()
             message(STATUS "Skipping test_offline_verifier: missing tests/test_offline_verifier.c")
