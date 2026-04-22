@@ -7,7 +7,7 @@ mkdir -p "$REPORT_DIR"
 
 echo "=== cppcheck ==="
 cppcheck \
-  --enable=warning,style,performance \
+  --enable=warning,performance,portability \
   --suppress=missingIncludeSystem \
   --suppress=unusedFunction \
   --error-exitcode=1 \
