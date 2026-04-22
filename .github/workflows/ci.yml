@@ -72,3 +72,19 @@ jobs:
         with:
           name: static-analysis-report
           path: docs/results/cppcheck_report.txt
+
+  static-analysis-style:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: Run style analysis (non-blocking)
+        run: bash scripts/run_static_analysis_style.sh
+      - name: Upload style report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-style-report
+          path: docs/results/cppcheck_style_report.txt
