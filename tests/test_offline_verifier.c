@@ -385,7 +385,16 @@ static void corrupt_ts_count_inconsistent(const char *path) {
         uint32_t count_off;
         ASSERT_EQ(read_at(fp, banks[i] + 32u, payload, sizeof(payload)), 1);
         name_len = payload[0];
+        if (name_len > 48u) {
+            payload[0] = 2u;
+            payload[1] = 's';
+            payload[2] = '1';
+            name_len = 2u;
+        }
         count_off = 1u + (uint32_t)name_len + 1u + 4u;
+        if (count_off + 4u > sizeof(payload)) {
+            count_off = 8u;
+        }
         put_u32(payload + count_off, 0x0000FFFFu);
         ASSERT_EQ(write_at(fp, banks[i] + 32u, payload, sizeof(payload)), 1);
         ASSERT_EQ(patch_page_crc(fp, banks[i]), 1);
@@ -410,7 +419,17 @@ static void corrupt_rel_live_count_mismatch(const char *path) {
         uint32_t live_count_off;
         ASSERT_EQ(read_at(fp, banks[i] + 32u, payload, sizeof(payload)), 1);
         name_len = payload[0];
+        if (name_len > 56u) {
+            payload[0] = 3u;
+            payload[1] = 'r';
+            payload[2] = 'e';
+            payload[3] = 'l';
+            name_len = 3u;
+        }
         live_count_off = 1u + (uint32_t)name_len + 2u + 4u + 4u + 4u + 4u;
+        if (live_count_off + 4u > sizeof(payload)) {
+            live_count_off = 26u;
+        }
         put_u32(payload + live_count_off, 0x0000FFFFu);
         ASSERT_EQ(write_at(fp, banks[i] + 32u, payload, sizeof(payload)), 1);
         ASSERT_EQ(patch_page_crc(fp, banks[i]), 1);
