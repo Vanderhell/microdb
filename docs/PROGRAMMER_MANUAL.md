@@ -174,6 +174,51 @@ Current releases require:
 
 Violations fail initialization (`MICRODB_ERR_INVALID`).
 
+## 5.4 Capacity planning
+
+`microdb` uses a three-arena RAM model computed in `microdb_init()`:
+
+- `kv_arena = floor((ram_kb * 1024) * kv_pct / 100)`
+- `ts_arena = floor((ram_kb * 1024) * ts_pct / 100)`
+- `rel_arena = remaining bytes after TS and pointer-alignment step`
+
+KV usable entry limit:
+
+- `kv_entries_usable = MICRODB_KV_MAX_KEYS - MICRODB_TXN_STAGE_KEYS`
+
+KV value-store capacity (current build ABI):
+
+- `bucket_count = next_pow2(ceil((kv_entries_usable * 4) / 3))`
+- `bucket_array_bytes = bucket_count * sizeof(microdb_kv_bucket_t)`
+- `txn_stage_bytes = MICRODB_TXN_STAGE_KEYS * sizeof(microdb_txn_stage_entry_t)`
+- `value_store_bytes = kv_arena - align8(bucket_array_bytes) - txn_stage_bytes`
+
+TS retention depends on registered streams and stream stride:
+
+- `sample_stride = sizeof(timestamp) + value_size` (`F32/I32/U32=8`, `RAW16=20`)
+- `samples_per_stream ~= floor((ts_arena / stream_count) / sample_stride)`
+- `retention_hours = samples_per_stream / inserts_per_hour_per_stream`
+
+Tooling:
+
+- Capacity estimator: `tools/microdb_capacity_estimator.html`
+
+Wear model (storage enabled):
+
+- WAL/dual-bank layout follows `src/microdb_wal.c` (`wal_target=erase*8`, `wal_min=erase*2`, two superblocks, two banks)
+- `wal_compact_threshold_pct` controls when automatic compaction triggers based on WAL fill percentage
+- lower threshold => earlier, more frequent compactions; higher threshold => longer WAL growth before compaction
+
+Worked example (ESP32 sensor node):
+
+- 3 temperature streams (`F32`), 512 KB flash, 4096 B erase blocks, 10-year target lifetime
+- set these values in `tools/microdb_capacity_estimator.html`
+- verify:
+  1. RAM split leaves sufficient KV value-store for config keys
+  2. TS retention satisfies required history horizon
+  3. estimated flash lifetime is at or above target
+  4. WAL and dual-bank footprint fits within available flash
+
 ## 6. Quick start (practical)
 
 ```c

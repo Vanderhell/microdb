@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -6,57 +6,57 @@
   <title>microdb Capacity Estimator</title>
   <style>
     :root {
-      --bg: #f6f7f9;
+      --bg: #f4f6f0;
       --panel: #ffffff;
-      --text: #17212b;
-      --muted: #5f6b7a;
-      --line: #d8dde5;
-      --accent: #0b6bcb;
+      --line: #d5d9c8;
+      --text: #1f2a1f;
+      --muted: #5a6656;
+      --accent: #2f6f4f;
+      --warn: #9f3e1f;
     }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      background: linear-gradient(140deg, #f2f5f9 0%, #e9eef4 100%);
+      font-family: "IBM Plex Sans", "Segoe UI", Tahoma, sans-serif;
       color: var(--text);
+      background:
+        radial-gradient(circle at 15% 0%, #e8f1da 0%, transparent 35%),
+        radial-gradient(circle at 85% 5%, #d7e5ff 0%, transparent 30%),
+        linear-gradient(160deg, #eef3e4 0%, #eaf0e3 40%, #e5ece0 100%);
     }
     .wrap {
-      max-width: 1100px;
+      max-width: 1240px;
       margin: 24px auto;
-      padding: 0 16px;
+      padding: 0 14px 24px;
       display: grid;
-      gap: 16px;
-      grid-template-columns: 1fr;
+      gap: 12px;
     }
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      box-shadow: 0 4px 16px rgba(33, 44, 34, 0.06);
     }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
-    }
-    .muted {
-      margin: 0;
-      color: var(--muted);
-    }
+    h1, h2 { margin: 0 0 8px; }
+    h1 { font-size: 26px; }
+    h2 { font-size: 18px; }
+    .muted { color: var(--muted); margin: 4px 0 0; }
     .grid {
-      margin-top: 12px;
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 10px;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 10px;
     }
     label {
       display: block;
       font-size: 12px;
       color: var(--muted);
       margin-bottom: 4px;
+      font-weight: 600;
     }
     input, select {
       width: 100%;
-      box-sizing: border-box;
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 8px;
@@ -64,268 +64,426 @@
       background: #fff;
       color: var(--text);
     }
-    .result {
+    .row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 10px;
-      margin-top: 10px;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     }
-    .tile {
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .card {
       border: 1px solid var(--line);
       border-radius: 10px;
+      background: #f9fbf4;
       padding: 10px;
-      background: #fbfdff;
     }
-    .k {
-      color: var(--muted);
+    .k { font-size: 12px; color: var(--muted); }
+    .v { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 12px;
+      white-space: pre-wrap;
+      background: #f4f7ef;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 8px;
     }
-    .v {
+    .warn {
+      color: var(--warn);
       font-weight: 700;
-      font-size: 18px;
-      margin-top: 2px;
-    }
-    code {
-      background: #f1f5fa;
-      border: 1px solid #dbe4ef;
-      border-radius: 6px;
-      padding: 2px 6px;
-      font-size: 12px;
+      margin-top: 8px;
+      font-size: 13px;
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="panel">
-      <h1>microdb Storage + Record Estimator</h1>
-      <p class="muted">
-        Storage layout math follows <code>src/microdb_wal.c</code> (alignment, WAL, superblocks, dual banks).<br>
-        Record counts are engineering estimates for planning budgets.
-      </p>
+      <h1>microdb Capacity Estimator</h1>
+      <p class="muted">Model follows <code>src/microdb.c</code>, <code>src/microdb_kv.c</code>, <code>src/microdb_ts.c</code>, <code>src/microdb_rel.c</code>, <code>src/microdb_wal.c</code>.</p>
       <div class="grid">
         <div>
-          <label>Storage Profile</label>
-          <select id="profile">
-            <option value="2097152">2 MiB</option>
-            <option value="4194304">4 MiB</option>
-            <option value="8388608">8 MiB</option>
-            <option value="16777216">16 MiB</option>
-            <option value="33554432" selected>32 MiB</option>
-            <option value="custom">Custom</option>
+          <label>Preset</label>
+          <select id="preset">
+            <option value="FOOTPRINT_MIN">FOOTPRINT_MIN (8KB)</option>
+            <option value="CORE_MIN">CORE_MIN (32KB)</option>
+            <option value="CORE_WAL" selected>CORE_WAL (32KB)</option>
+            <option value="CORE_PERF">CORE_PERF (64KB)</option>
+            <option value="CORE_HIMEM">CORE_HIMEM (128KB)</option>
+            <option value="CUSTOM">Custom</option>
           </select>
         </div>
         <div>
-          <label>Capacity Bytes (custom)</label>
-          <input id="capacityBytes" type="number" min="1024" step="1" value="33554432">
-        </div>
-        <div>
-          <label>Erase Size (bytes)</label>
-          <input id="eraseSize" type="number" min="1" step="1" value="256">
-        </div>
-        <div>
-          <label>RAM Budget (KB)</label>
-          <input id="ramKb" type="number" min="8" max="4096" step="1" value="32">
-        </div>
-        <div>
-          <label>KV / TS / REL % split</label>
-          <input id="pct" type="text" value="40,40,20">
-        </div>
-        <div>
-          <label>KV max keys</label>
-          <input id="kvMaxKeys" type="number" min="1" value="64">
-        </div>
-        <div>
-          <label>TXN stage keys</label>
-          <input id="txnStageKeys" type="number" min="0" value="8">
-        </div>
-        <div>
-          <label>Avg KV value length (bytes)</label>
-          <input id="avgKvValueBytes" type="number" min="1" value="32">
-        </div>
-        <div>
-          <label>TS max streams</label>
-          <input id="tsMaxStreams" type="number" min="1" value="8">
-        </div>
-        <div>
-          <label>TS sample struct bytes (default 20)</label>
-          <input id="tsSampleBytes" type="number" min="8" value="20">
-        </div>
-        <div>
-          <label>REL row size (bytes)</label>
-          <input id="relRowBytes" type="number" min="4" value="32">
-        </div>
-        <div>
-          <label>REL indexed table?</label>
-          <select id="relIndexed">
-            <option value="1" selected>Yes</option>
-            <option value="0">No</option>
+          <label>Platform ABI</label>
+          <select id="ptrBits">
+            <option value="32">32-bit</option>
+            <option value="64" selected>64-bit</option>
           </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="panel">
+        <h2>RAM Inputs</h2>
+        <div class="grid">
+          <div><label>RAM KB</label><input id="ramKb" type="range" min="8" max="1024" value="32"><input id="ramKbNum" type="number" min="8" max="1024" value="32"></div>
+          <div><label>KV %</label><input id="kvPct" type="range" min="1" max="98" value="40"><input id="kvPctNum" type="number" min="1" max="98" value="40"></div>
+          <div><label>TS %</label><input id="tsPct" type="range" min="1" max="98" value="40"><input id="tsPctNum" type="number" min="1" max="98" value="40"></div>
+          <div><label>REL % (auto)</label><input id="relPctNum" type="number" readonly value="20"></div>
+          <div><label>KV max keys</label><input id="kvMaxKeys" type="number" min="1" value="64"></div>
+          <div><label>KV key max len</label><input id="kvKeyMaxLen" type="number" min="4" value="32"></div>
+          <div><label>KV val max len</label><input id="kvValMaxLen" type="number" min="1" value="128"></div>
+          <div><label>TXN stage keys</label><input id="txnStageKeys" type="number" min="1" value="8"></div>
+          <div><label>TS max streams</label><input id="tsMaxStreams" type="number" min="1" value="8"></div>
+          <div><label>TS stream name len</label><input id="tsNameLen" type="number" min="4" value="16"></div>
+          <div><label>REL max tables</label><input id="relMaxTables" type="number" min="1" value="4"></div>
+          <div><label>REL max cols</label><input id="relMaxCols" type="number" min="1" value="16"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Storage Inputs</h2>
+        <div class="grid">
+          <div><label>Storage enabled</label><select id="storageEnabled"><option value="0" selected>off</option><option value="1">on</option></select></div>
+          <div><label>Flash capacity KB</label><input id="flashKb" type="range" min="64" max="4096" value="512"><input id="flashKbNum" type="number" min="64" max="4096" value="512"></div>
+          <div><label>Erase block size</label><select id="eraseSize"><option>512</option><option>1024</option><option>2048</option><option selected>4096</option><option>65536</option></select></div>
+          <div><label>WAL enabled</label><select id="walEnabled"><option value="1" selected>on</option><option value="0">off</option></select></div>
+          <div><label>WAL compact threshold %</label><input id="walThreshold" type="range" min="50" max="95" value="75"><input id="walThresholdNum" type="number" min="50" max="95" value="75"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Usage Profile</h2>
+        <div class="grid">
+          <div><label>KV ops/hour</label><input id="kvOpsHr" type="number" min="0" value="100"></div>
+          <div><label>TS inserts/hour total</label><input id="tsOpsHr" type="number" min="0" value="1000"></div>
+          <div><label>REL inserts/hour</label><input id="relOpsHr" type="number" min="0" value="10"></div>
+          <div><label>Flash endurance P/E cycles</label><select id="peCycles"><option>10000</option><option>50000</option><option selected>100000</option></select></div>
+          <div><label>Target lifetime years</label><select id="targetYears"><option>1</option><option>5</option><option>10</option><option selected>20</option></select></div>
         </div>
       </div>
     </div>
 
     <div class="panel">
-      <h2>Computed</h2>
-      <div class="result">
-        <div class="tile"><div class="k">Layout Total Required</div><div class="v" id="layoutTotal"></div></div>
-        <div class="tile"><div class="k">WAL Size</div><div class="v" id="walSize"></div></div>
-        <div class="tile"><div class="k">Bank Size (one)</div><div class="v" id="bankSize"></div></div>
-        <div class="tile"><div class="k">KV Snapshot Region</div><div class="v" id="kvSnapSize"></div></div>
-        <div class="tile"><div class="k">TS Snapshot Region</div><div class="v" id="tsSnapSize"></div></div>
-        <div class="tile"><div class="k">REL Snapshot Region</div><div class="v" id="relSnapSize"></div></div>
-        <div class="tile"><div class="k">KV Entries (macro cap)</div><div class="v" id="kvMacroCap"></div></div>
-        <div class="tile"><div class="k">KV Entries (value-pool est.)</div><div class="v" id="kvEstCap"></div></div>
-        <div class="tile"><div class="k">TS Samples / Stream (est.)</div><div class="v" id="tsPerStream"></div></div>
-        <div class="tile"><div class="k">REL Rows / Table (est.)</div><div class="v" id="relRows"></div></div>
-      </div>
-      <p class="muted" id="notes"></p>
+      <h2>RAM Breakdown (matches microdb_init)</h2>
+      <div class="cards" id="ramCards"></div>
+      <div class="mono" id="ramDetail"></div>
+    </div>
+
+    <div class="panel">
+      <h2>KV / TS Capacity</h2>
+      <div class="cards" id="capCards"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Storage Layout / Wear</h2>
+      <div class="cards" id="storageCards"></div>
+      <div class="warn" id="lifetimeWarn"></div>
+    </div>
+
+    <div class="panel">
+      <h2>CMake Defines</h2>
+      <div class="mono" id="cmakeOut"></div>
     </div>
   </div>
 
   <script>
-    function alignU32(value, align) {
-      return Math.ceil(value / align) * align;
+    const el = (id) => document.getElementById(id);
+    const fmt = (n) => Number(n).toLocaleString("en-US");
+    const f2 = (n) => Number.isFinite(n) ? n.toFixed(2) : "0.00";
+
+    const profiles = {
+      FOOTPRINT_MIN: { ramKb: 8, kvPct: 40, tsPct: 40, kvMaxKeys: 16, kvKeyMaxLen: 16, kvValMaxLen: 64, txnStageKeys: 2, tsMaxStreams: 1, tsNameLen: 16, relMaxTables: 1, relMaxCols: 1 },
+      CORE_MIN:      { ramKb: 32, kvPct: 40, tsPct: 40, kvMaxKeys: 48, kvKeyMaxLen: 32, kvValMaxLen: 128, txnStageKeys: 8, tsMaxStreams: 4, tsNameLen: 16, relMaxTables: 2, relMaxCols: 8 },
+      CORE_WAL:      { ramKb: 32, kvPct: 40, tsPct: 40, kvMaxKeys: 64, kvKeyMaxLen: 32, kvValMaxLen: 128, txnStageKeys: 8, tsMaxStreams: 8, tsNameLen: 16, relMaxTables: 4, relMaxCols: 16 },
+      CORE_PERF:     { ramKb: 64, kvPct: 40, tsPct: 40, kvMaxKeys: 128, kvKeyMaxLen: 32, kvValMaxLen: 128, txnStageKeys: 8, tsMaxStreams: 8, tsNameLen: 16, relMaxTables: 4, relMaxCols: 16 },
+      CORE_HIMEM:    { ramKb: 128, kvPct: 40, tsPct: 40, kvMaxKeys: 256, kvKeyMaxLen: 32, kvValMaxLen: 128, txnStageKeys: 8, tsMaxStreams: 8, tsNameLen: 16, relMaxTables: 4, relMaxCols: 16 }
+    };
+
+    function align(v, a) { return Math.ceil(v / a) * a; }
+
+    function syncPair(rangeId, numId) {
+      const r = el(rangeId);
+      const n = el(numId);
+      r.addEventListener("input", () => { n.value = r.value; update(); });
+      n.addEventListener("input", () => { r.value = n.value; update(); });
     }
-    function mib(bytes) {
-      return (bytes / (1024 * 1024)).toFixed(2) + " MiB";
-    }
-    function fmtInt(v) {
-      return Number(v).toLocaleString("en-US");
-    }
-    function parsePct(text) {
-      const parts = text.split(",").map(v => Number(v.trim()));
-      if (parts.length !== 3 || parts.some(v => !Number.isFinite(v) || v <= 0)) {
-        return null;
-      }
-      if ((parts[0] + parts[1] + parts[2]) !== 100) {
-        return null;
-      }
-      return { kv: parts[0], ts: parts[1], rel: parts[2] };
-    }
+
+    syncPair("ramKb", "ramKbNum");
+    syncPair("kvPct", "kvPctNum");
+    syncPair("tsPct", "tsPctNum");
+    syncPair("flashKb", "flashKbNum");
+    syncPair("walThreshold", "walThresholdNum");
+
+    el("preset").addEventListener("change", () => {
+      const p = el("preset").value;
+      if (p === "CUSTOM") { update(); return; }
+      const v = profiles[p];
+      Object.keys(v).forEach((k) => {
+        const id = k === "ramKb" ? "ramKbNum" : k === "kvPct" ? "kvPctNum" : k === "tsPct" ? "tsPctNum" : k;
+        if (el(id)) { el(id).value = v[k]; }
+      });
+      el("ramKb").value = v.ramKb;
+      el("kvPct").value = v.kvPct;
+      el("tsPct").value = v.tsPct;
+      update();
+    });
+
+    ["ptrBits","ramKbNum","kvPctNum","tsPctNum","kvMaxKeys","kvKeyMaxLen","kvValMaxLen","txnStageKeys","tsMaxStreams","tsNameLen","relMaxTables","relMaxCols","storageEnabled","flashKbNum","eraseSize","walEnabled","walThresholdNum","kvOpsHr","tsOpsHr","relOpsHr","peCycles","targetYears"].forEach((id) => {
+      el(id).addEventListener("input", update);
+      el(id).addEventListener("change", update);
+    });
+
     function kvBucketCount(entryLimit) {
       const required = Math.floor((entryLimit * 4 + 2) / 3);
       let buckets = 1;
-      while (buckets < required) {
-        buckets <<= 1;
-      }
+      while (buckets < required) buckets <<= 1;
       return buckets;
     }
-    function relMaxRows(relBytes, rowSize, indexed) {
-      let lo = 0;
-      let hi = 1000000;
-      while (lo < hi) {
-        const mid = Math.floor((lo + hi + 1) / 2);
-        const needRows = mid * rowSize;
-        const needAlive = Math.floor((mid + 7) / 8);
-        const needOrder = mid * 4;
-        const needIndex = indexed ? (mid * 20) : 0;
-        const needTotal = needRows + needAlive + needOrder + needIndex + 32;
-        if (needTotal <= relBytes) {
-          lo = mid;
-        } else {
-          hi = mid - 1;
-        }
-      }
-      return lo;
+
+    function sizeofKvBucket(keyMaxLen) {
+      // sizeof(microdb_kv_bucket_t) - from src/microdb_internal.h
+      return align(8 + keyMaxLen, 4) + 16;
     }
 
-    function compute() {
-      const profile = document.getElementById("profile").value;
-      const capacityInput = document.getElementById("capacityBytes");
-      if (profile !== "custom") {
-        capacityInput.value = profile;
-      }
+    function sizeofTxnStage(keyMaxLen, valMaxLen, ptrBytes) {
+      // sizeof(microdb_txn_stage_entry_t) - from src/microdb_internal.h
+      let off = 0;
+      off += keyMaxLen;
+      off = align(off, ptrBytes);
+      off += ptrBytes;
+      off += ptrBytes;
+      off += 4;
+      off += 1;
+      off += valMaxLen;
+      return align(off, ptrBytes);
+    }
 
-      const capacity = Number(capacityInput.value);
-      const eraseSize = Number(document.getElementById("eraseSize").value);
-      const ramKb = Number(document.getElementById("ramKb").value);
-      const pcts = parsePct(document.getElementById("pct").value);
-      const kvMaxKeys = Number(document.getElementById("kvMaxKeys").value);
-      const txnStageKeys = Number(document.getElementById("txnStageKeys").value);
-      const avgKvValueBytes = Number(document.getElementById("avgKvValueBytes").value);
-      const tsMaxStreams = Number(document.getElementById("tsMaxStreams").value);
-      const tsSampleBytes = Number(document.getElementById("tsSampleBytes").value);
-      const relRowBytes = Number(document.getElementById("relRowBytes").value);
-      const relIndexed = Number(document.getElementById("relIndexed").value) === 1;
+    function sizeofTsStream(tsNameLen, ptrBytes) {
+      // sizeof(microdb_ts_stream_t) - from src/microdb_internal.h
+      let off = 0;
+      off += tsNameLen;
+      off += 4; // enum microdb_ts_type_t
+      off = align(off, ptrBytes);
+      off += ptrBytes; // size_t raw_size
+      off += 20; // sample_stride/head/tail/count/capacity
+      off = align(off, ptrBytes);
+      off += ptrBytes; // buf pointer
+      off += 1; // bool registered
+      return align(off, ptrBytes);
+    }
 
-      const notes = [];
-      if (!pcts) {
-        document.getElementById("notes").textContent = "Split must be exactly three positive values summing to 100 (for example 40,40,20).";
-        return;
-      }
-      if (!Number.isFinite(capacity) || !Number.isFinite(eraseSize) || eraseSize <= 0 || capacity <= 0) {
-        document.getElementById("notes").textContent = "Capacity and erase size must be positive.";
-        return;
-      }
-      if (kvMaxKeys <= txnStageKeys) {
-        document.getElementById("notes").textContent = "KV max keys must be greater than TXN stage keys.";
-        return;
-      }
+    function sizeofColDesc(ptrBytes) {
+      // sizeof(microdb_col_desc_t) - from src/microdb_internal.h
+      let off = 0;
+      off += 16; // MICRODB_REL_COL_NAME_LEN default
+      off += 4; // enum microdb_col_type_t
+      off = align(off, ptrBytes);
+      off += ptrBytes; // size_t size
+      off += ptrBytes; // size_t offset
+      off += 1; // bool is_index
+      return align(off, ptrBytes);
+    }
+
+    function sizeofTable(relMaxCols, ptrBytes) {
+      // sizeof(struct microdb_table_s) - from src/microdb_internal.h
+      const colDesc = sizeofColDesc(ptrBytes);
+      let off = 0;
+      off += 16; // name
+      off += 2;  // schema_version
+      off = align(off, 4);
+      off += colDesc * relMaxCols;
+      off += 4; // col_count
+      off += 4; // max_rows
+      off = align(off, ptrBytes);
+      off += ptrBytes; // row_size size_t
+      off += 4; // index_col
+      off = align(off, ptrBytes);
+      off += ptrBytes; // index_key_size
+      off += ptrBytes * 4; // rows/alive/index/order pointers
+      off += 16; // live/index/order/mutation counts
+      off += 1; // registered
+      return align(off, ptrBytes);
+    }
+
+    function update() {
+      const ptrBits = Number(el("ptrBits").value);
+      const ptrBytes = ptrBits / 8;
+      const ramKb = Number(el("ramKbNum").value);
+      const kvPct = Number(el("kvPctNum").value);
+      const tsPct = Number(el("tsPctNum").value);
+      const relPct = Math.max(0, 100 - kvPct - tsPct);
+      el("relPctNum").value = relPct;
+
+      const kvMaxKeys = Number(el("kvMaxKeys").value);
+      const kvKeyMaxLen = Number(el("kvKeyMaxLen").value);
+      const kvValMaxLen = Number(el("kvValMaxLen").value);
+      const txnStageKeys = Number(el("txnStageKeys").value);
+      const tsMaxStreams = Number(el("tsMaxStreams").value);
+      const tsNameLen = Number(el("tsNameLen").value);
+      const relMaxTables = Number(el("relMaxTables").value);
+      const relMaxCols = Number(el("relMaxCols").value);
 
       const totalBytes = ramKb * 1024;
-      const kvBytes = Math.floor(totalBytes * pcts.kv / 100);
-      const tsBytes = Math.floor(totalBytes * pcts.ts / 100);
-      const relBytes = totalBytes - kvBytes - tsBytes;
+      // (total * pct) / 100 - from src/microdb.c microdb_slice_bytes
+      const kvArena = Math.floor(totalBytes * kvPct / 100);
+      const tsArena = Math.floor(totalBytes * tsPct / 100);
+      const cursorAfterKv = kvArena;
+      // ts base aligned to sizeof(uint32_t) - from src/microdb.c
+      const tsAlignWaste = align(cursorAfterKv, 4) - cursorAfterKv;
+      const tsEnd = cursorAfterKv + tsAlignWaste + tsArena;
+      // rel base aligned to sizeof(void*) - from src/microdb.c
+      const relAlignWaste = align(tsEnd, ptrBytes) - tsEnd;
+      const relArena = Math.max(0, totalBytes - (cursorAfterKv + tsAlignWaste + tsArena + relAlignWaste));
 
-      const kvEntryLimit = kvMaxKeys - txnStageKeys;
-      const kvBuckets = kvBucketCount(kvEntryLimit);
+      const entryLimit = Math.max(0, kvMaxKeys - txnStageKeys);
+      const buckets = kvBucketCount(Math.max(1, entryLimit));
+      const kvBucketBytes = buckets * sizeofKvBucket(kvKeyMaxLen);
+      const kvBucketAlignWaste = align(kvBucketBytes, 8) - kvBucketBytes;
+      const txnStageBytes = txnStageKeys * sizeofTxnStage(kvKeyMaxLen, kvValMaxLen, ptrBytes);
+      const kvValueStore = Math.max(0, kvArena - kvBucketBytes - kvBucketAlignWaste - txnStageBytes);
 
-      const kvPerEntryMaxSnapshot = 1 + 31 + 4 + 128 + 4; // mirrors microdb_kv_snapshot_payload_max defaults
-      const kvSnapshotPayloadMax = kvEntryLimit * kvPerEntryMaxSnapshot;
-      const kvSnapSize = alignU32(kvSnapshotPayloadMax + 32, eraseSize);
-      const tsSnapSize = alignU32(tsBytes + 32, eraseSize);
-      const relSnapSize = alignU32(relBytes + 32, eraseSize);
-      const bankSize = kvSnapSize + tsSnapSize + relSnapSize;
+      const tsStreamDescBytes = tsMaxStreams * sizeofTsStream(tsNameLen, ptrBytes);
+      const relTableDescBytes = relMaxTables * sizeofTable(relMaxCols, ptrBytes);
 
-      const superSize = eraseSize;
-      const fixedBytes = superSize * 2;
-      const needWithoutWal = fixedBytes + bankSize * 2;
-      const walMin = eraseSize * 2;
-      const walTarget = eraseSize * 8;
-      const maxWal = capacity - needWithoutWal;
-      const maxWalAligned = Math.floor(maxWal / eraseSize) * eraseSize;
-      let walSize = walTarget;
-      if (walSize > maxWalAligned) walSize = maxWalAligned;
-      if (walSize < walMin) walSize = walMin;
-      const layoutTotal = walSize + fixedBytes + bankSize * 2;
+      const f32Stride = 8;
+      const raw16Stride = 20;
+      const f32SamplesPerStream = tsMaxStreams > 0 ? Math.floor(Math.floor(tsArena / tsMaxStreams) / f32Stride) : 0;
+      const raw16SamplesPerStream = tsMaxStreams > 0 ? Math.floor(Math.floor(tsArena / tsMaxStreams) / raw16Stride) : 0;
 
-      const kvBucketStructBytes = 52; // expected with default packing
-      const kvTxnStageStructBytes = 184; // expected on 64-bit builds
-      const kvMetaBytes = (kvBuckets * kvBucketStructBytes) + (txnStageKeys * kvTxnStageStructBytes);
-      const kvValuePoolBytes = Math.max(0, kvBytes - kvMetaBytes);
-      const kvByValuePool = Math.floor(kvValuePoolBytes / avgKvValueBytes);
-      const kvEstCap = Math.max(0, Math.min(kvEntryLimit, kvByValuePool));
+      const tsOpsHr = Number(el("tsOpsHr").value);
+      const insertsPerStreamHr = tsMaxStreams > 0 ? (tsOpsHr / tsMaxStreams) : 0;
+      const f32RetentionHr = insertsPerStreamHr > 0 ? (f32SamplesPerStream / insertsPerStreamHr) : 0;
+      const raw16RetentionHr = insertsPerStreamHr > 0 ? (raw16SamplesPerStream / insertsPerStreamHr) : 0;
 
-      const tsPerStream = Math.floor(Math.floor(tsBytes / tsMaxStreams) / tsSampleBytes);
-      const relRows = relMaxRows(relBytes, relRowBytes, relIndexed);
+      const storageEnabled = el("storageEnabled").value === "1";
+      const walEnabled = el("walEnabled").value === "1";
+      const flashBytes = Number(el("flashKbNum").value) * 1024;
+      const eraseSize = Number(el("eraseSize").value);
+      const walThreshold = Number(el("walThresholdNum").value);
 
-      if (capacity < (needWithoutWal + walMin)) {
-        notes.push("Storage capacity is below minimum required for this RAM/snapshot layout.");
+      let kvSnap = 0, tsSnap = 0, relSnap = 0, bankSize = 0, walSize = 0, totalUsed = 0, remaining = 0;
+      let compactionsHr = 0, compactionsYear = 0, pePerYear = 0, lifetimeYears = 0;
+      let warn = "";
+
+      if (storageEnabled) {
+        // max_entries * (1 + max_key_len + 4 + max_val_len + 4) - from src/microdb_wal.c microdb_kv_snapshot_payload_max
+        const maxKeyLen = kvKeyMaxLen > 0 ? (kvKeyMaxLen - 1) : 0;
+        const perEntry = 1 + maxKeyLen + 4 + kvValMaxLen + 4;
+        const kvPayloadMax = entryLimit * perEntry;
+        kvSnap = align(kvPayloadMax + 32, eraseSize);
+        tsSnap = align(tsArena + 32, eraseSize);
+        relSnap = align(relArena + 32, eraseSize);
+        bankSize = kvSnap + tsSnap + relSnap;
+
+        const fixedBytes = eraseSize * 2;
+        const needNoWal = fixedBytes + (bankSize * 2);
+        const walTarget = eraseSize * 8;
+        const walMin = eraseSize * 2;
+
+        if (walEnabled && flashBytes >= needNoWal + walMin) {
+          const maxWal = flashBytes - needNoWal;
+          const maxWalAligned = Math.floor(maxWal / eraseSize) * eraseSize;
+          walSize = Math.max(walMin, Math.min(walTarget, maxWalAligned));
+        } else if (!walEnabled) {
+          walSize = 0;
+        }
+
+        totalUsed = walSize + fixedBytes + (bankSize * 2);
+        remaining = Math.max(0, flashBytes - totalUsed);
+
+        const kvOpsHr = Number(el("kvOpsHr").value);
+        const relOpsHr = Number(el("relOpsHr").value);
+        const avgKeyLen = Math.min(Math.max(4, Math.floor(kvKeyMaxLen / 2)), kvKeyMaxLen - 1);
+        const avgValLen = Math.max(1, Math.floor(kvValMaxLen / 2));
+        const kvEntryBytes = 16 + align(1 + avgKeyLen + 4 + avgValLen + 4, 4);
+        const tsEntryBytes = 16 + align(1 + Math.min(tsNameLen - 1, 8) + 4 + 4, 4);
+        const relEntryBytes = 16 + align(32, 4);
+        const walBytesHr = (kvOpsHr * kvEntryBytes) + (tsOpsHr * tsEntryBytes) + (relOpsHr * relEntryBytes);
+        const compactTrigger = walSize > 0 ? (walSize - 32) * (walThreshold / 100) : 0;
+        compactionsHr = compactTrigger > 0 ? (walBytesHr / compactTrigger) : 0;
+        compactionsYear = compactionsHr * 24 * 365;
+
+        const eraseBlocks = eraseSize > 0 ? (flashBytes / eraseSize) : 0;
+        const erasesPerCompaction = eraseSize > 0 ? ((bankSize + walSize) / eraseSize) : 0;
+        pePerYear = eraseBlocks > 0 ? (compactionsYear * erasesPerCompaction / eraseBlocks) : 0;
+        const peCycles = Number(el("peCycles").value);
+        lifetimeYears = pePerYear > 0 ? (peCycles / pePerYear) : 0;
+
+        const targetYears = Number(el("targetYears").value);
+        warn = (lifetimeYears > 0 && lifetimeYears < targetYears) ? `WARNING: estimated flash lifetime ${f2(lifetimeYears)} years is below target ${targetYears} years.` : "";
       }
-      notes.push("KV estimate uses metadata defaults (bucket=52B, txn_stage=184B). Adjust if your ABI differs.");
-      notes.push("TS and REL counts are per-stream/per-table engineering estimates.");
 
-      document.getElementById("layoutTotal").textContent = fmtInt(layoutTotal) + " (" + mib(layoutTotal) + ")";
-      document.getElementById("walSize").textContent = fmtInt(walSize) + " (" + mib(walSize) + ")";
-      document.getElementById("bankSize").textContent = fmtInt(bankSize) + " (" + mib(bankSize) + ")";
-      document.getElementById("kvSnapSize").textContent = fmtInt(kvSnapSize);
-      document.getElementById("tsSnapSize").textContent = fmtInt(tsSnapSize);
-      document.getElementById("relSnapSize").textContent = fmtInt(relSnapSize);
-      document.getElementById("kvMacroCap").textContent = fmtInt(kvEntryLimit);
-      document.getElementById("kvEstCap").textContent = fmtInt(kvEstCap);
-      document.getElementById("tsPerStream").textContent = fmtInt(Math.max(0, tsPerStream));
-      document.getElementById("relRows").textContent = fmtInt(relRows);
-      document.getElementById("notes").textContent = notes.join(" ");
+      const ramCards = [
+        ["Total RAM", `${fmt(totalBytes)} B`],
+        ["KV arena", `${fmt(kvArena)} B`],
+        ["TS arena", `${fmt(tsArena)} B`],
+        ["REL arena", `${fmt(relArena)} B`],
+        ["KV bucket array", `${fmt(kvBucketBytes)} B`],
+        ["KV txn stage", `${fmt(txnStageBytes)} B`],
+        ["KV value store", `${fmt(kvValueStore)} B`],
+        ["Align waste", `${fmt(tsAlignWaste + relAlignWaste + kvBucketAlignWaste)} B`]
+      ];
+      el("ramCards").innerHTML = ramCards.map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+      el("ramDetail").textContent =
+`KV: bucket_array=${kvBucketBytes}B, txn_stage=${txnStageBytes}B, value_store=${kvValueStore}B, alloc_align_waste=${kvBucketAlignWaste}B
+TS: stream_descriptors(core)=${tsStreamDescBytes}B, ring_buffer_init=0B, arena=${tsArena}B
+REL: table_descriptors(core)=${relTableDescBytes}B, row_store_init=0B, alive_bitmap_init=0B, index_array_init=0B, order_array_init=0B, arena=${relArena}B
+Heap slicing: ts_align_waste=${tsAlignWaste}B, rel_align_waste=${relAlignWaste}B
+Total model check: ${kvArena + tsAlignWaste + tsArena + relAlignWaste + relArena} / ${totalBytes} B`;
+
+      const capCards = [
+        ["KV usable keys", `${fmt(entryLimit)}`],
+        ["KV value store total", `${fmt(kvValueStore)} B`],
+        ["KV max single value", `${fmt(kvValMaxLen)} B`],
+        ["KV avg bytes/key", entryLimit > 0 ? `${f2(kvValueStore / entryLimit)} B` : "0 B"],
+        ["TS samples/stream F32", `${fmt(f32SamplesPerStream)}`],
+        ["TS samples/stream RAW16", `${fmt(raw16SamplesPerStream)}`],
+        ["TS retention F32", `${f2(f32RetentionHr)} h`],
+        ["TS retention RAW16", `${f2(raw16RetentionHr)} h`]
+      ];
+      el("capCards").innerHTML = capCards.map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+      const storageCards = storageEnabled ? [
+        ["WAL region", `${fmt(walSize)} B`],
+        ["Superblock A+B", `${fmt(eraseSize * 2)} B`],
+        ["Bank A", `${fmt(bankSize)} B`],
+        ["Bank B", `${fmt(bankSize)} B`],
+        ["Storage used", `${fmt(totalUsed)} B`],
+        ["Storage remaining", `${fmt(remaining)} B`],
+        ["Compactions/hour", `${f2(compactionsHr)}`],
+        ["P/E cycles/year", `${f2(pePerYear)}`],
+        ["Flash lifetime", `${f2(lifetimeYears)} years`]
+      ] : [["Storage", "disabled"]];
+      el("storageCards").innerHTML = storageCards.map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+      el("lifetimeWarn").textContent = warn;
+
+      el("cmakeOut").textContent =
+`target_compile_definitions(your_target PRIVATE
+  MICRODB_RAM_KB=${ramKb}
+  MICRODB_RAM_KV_PCT=${kvPct}
+  MICRODB_RAM_TS_PCT=${tsPct}
+  MICRODB_RAM_REL_PCT=${relPct}
+  MICRODB_KV_MAX_KEYS=${kvMaxKeys}
+  MICRODB_KV_KEY_MAX_LEN=${kvKeyMaxLen}
+  MICRODB_KV_VAL_MAX_LEN=${kvValMaxLen}
+  MICRODB_TXN_STAGE_KEYS=${txnStageKeys}
+  MICRODB_TS_MAX_STREAMS=${tsMaxStreams}
+  MICRODB_TS_STREAM_NAME_LEN=${tsNameLen}
+  MICRODB_REL_MAX_TABLES=${relMaxTables}
+  MICRODB_REL_MAX_COLS=${relMaxCols}
+  MICRODB_WAL_COMPACT_THRESHOLD_PCT=${walThreshold}
+)`;
     }
 
-    [
-      "profile", "capacityBytes", "eraseSize", "ramKb", "pct", "kvMaxKeys", "txnStageKeys",
-      "avgKvValueBytes", "tsMaxStreams", "tsSampleBytes", "relRowBytes", "relIndexed"
-    ].forEach((id) => {
-      document.getElementById(id).addEventListener("input", compute);
-      document.getElementById(id).addEventListener("change", compute);
-    });
-    compute();
+    update();
   </script>
 </body>
 </html>
