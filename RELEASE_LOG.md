@@ -7,6 +7,30 @@ For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
 
 - No pending release notes.
 
+## v1.3.5 - 2026-04-22
+
+### Highlights
+
+- REL mutation semantics are now consistent and explicit:
+  - `microdb_rel_find` and `microdb_rel_iter` both return `MICRODB_ERR_MODIFIED` on concurrent mutation after callback re-lock.
+  - regression coverage added in `tests/test_rel.c`.
+- REL schema sealing now fails fast for oversized rows (`MICRODB_ERR_OVERFLOW`) instead of deferring failure to read paths.
+- Release/CI robustness improved for current platform matrix:
+  - release publish depends on sanitizer gate and build completion.
+  - macOS artifact lane labeling aligned (`macos-arm64`).
+  - macOS linker/map and footprint gate compatibility fixed (`-map` + `size -m` fallback parsing).
+
+### Test/Validation Stability
+
+- TS tests made capacity-safe for large profile capacities:
+  - fixed callback buffer overflow in `test_ts`.
+  - made `test_ts_reject` / `test_ts_downsample` setup and assertions resilient across sanitizer/release capacities.
+
+### Documentation
+
+- Added KV iteration weak-consistency contract in `include/microdb.h`.
+- Added known TS lifecycle limitation note (`no microdb_ts_unregister`) and thread-safety notes for `microdb_rel_find_by` lock-held copy behavior.
+
 ## v1.3.0 - 2026-04-21
 
 ### Added

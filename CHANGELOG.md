@@ -6,6 +6,33 @@ The format is inspired by Keep a Changelog and follows semantic versioning inten
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-04-22
+
+### Changed
+
+- Release workflow/platform hardening:
+  - publish job now explicitly depends on sanitizer gate and build jobs.
+  - macOS release artifact label aligned to `macos-arm64`.
+- Header-level KV iteration contract clarified as weakly-consistent under concurrent mutation.
+- Programmer and thread-safety docs updated with explicit REL mutation semantics and lock/copy behavior notes.
+
+### Fixed
+
+- REL consistency and error semantics:
+  - `microdb_rel_find` now returns `MICRODB_ERR_MODIFIED` (not `MICRODB_ERR_INVALID`) when table mutation is detected after callback re-lock.
+  - `microdb_rel_iter` now captures `mutation_seq` snapshot and returns `MICRODB_ERR_MODIFIED` when concurrent mutation is detected.
+  - Added regression coverage in `tests/test_rel.c` for both `rel_find` and `rel_iter` concurrent mutation detection.
+- REL schema guard:
+  - `microdb_schema_seal` now rejects rows larger than `MICRODB_REL_ROW_SCRATCH_MAX` with `MICRODB_ERR_OVERFLOW`.
+  - Added regression test `rel_schema_seal_rejects_oversized_row`.
+- TS test-suite stabilization for sanitizer/release profiles:
+  - fixed `test_ts` collector overflow for capacities above 256 samples.
+  - made `test_ts_reject` and `test_ts_downsample` capacity-aware and RAM-only in setup to avoid storage-path false failures.
+  - updated downsample tests to avoid hardcoded query bounds and fixed-size output buffers.
+- macOS release build compatibility:
+  - fixed footprint baseline linker map flag on Apple toolchain (`-Wl,-map,...` instead of GNU `-Map` form).
+  - `tests/check_footprint_min_size.cmake` now falls back to parsing `size -m` output when `size -A` is unavailable on macOS.
+
 ## [1.3.0] - 2026-04-21
 
 ### Added
