@@ -1,4 +1,4 @@
-# microdb Core Invariants
+# loxdb Core Invariants
 
 1. Active snapshot bank is never overwritten in place.
 2. Compact/flush writes inactive bank first, syncs, then switches superblock.

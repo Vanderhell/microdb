@@ -1,7 +1,7 @@
 # Product Positioning
 
 ## One-Sentence Identity
-microdb is a deterministic durable storage core for MCU and embedded systems, designed for power-fail-safe KV/TS/REL persistence with controlled latency.
+loxdb is a deterministic durable storage core for MCU and embedded systems, designed for power-fail-safe KV/TS/REL persistence with controlled latency.
 
 ## What We Sell
 - predictable embedded persistence behavior

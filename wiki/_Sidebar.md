@@ -1,4 +1,4 @@
-# microdb
+# loxdb
 
 - [Home](Home)
 - [Getting Started](Getting-Started)

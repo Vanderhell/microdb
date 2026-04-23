@@ -1,4 +1,4 @@
-# microdb Implementation Status (Verified Snapshot)
+# loxdb Implementation Status (Verified Snapshot)
 
 Date: 2026-04-19
 
@@ -6,12 +6,12 @@ This file summarizes what is implemented in the current repository state.
 
 ## Implemented core scope
 
-- KV engine (`src/microdb_kv.c`)
-- TS engine (`src/microdb_ts.c`)
-- REL engine (`src/microdb_rel.c`)
-- WAL/compact/recovery path (`src/microdb_wal.c`, `src/microdb.c`)
-- public C API (`include/microdb.h`)
-- C++ wrapper (`include/microdb_cpp.hpp`)
+- KV engine (`src/lox_kv.c`)
+- TS engine (`src/lox_ts.c`)
+- REL engine (`src/lox_rel.c`)
+- WAL/compact/recovery path (`src/lox_wal.c`, `src/loxdb.c`)
+- public C API (`include/lox.h`)
+- C++ wrapper (`include/lox_cpp.hpp`)
 
 ## Storage and ports
 
@@ -21,7 +21,7 @@ This file summarizes what is implemented in the current repository state.
 
 ## Optional backend modules
 
-Available modules under `src/backends/` and `include/microdb_backend_*.h`:
+Available modules under `src/backends/` and `include/lox_backend_*.h`:
 
 - registry/compat/decision/open flow
 - aligned adapter
@@ -47,7 +47,7 @@ Available modules under `src/backends/` and `include/microdb_backend_*.h`:
 ## Tooling/scripts present
 
 - validation runner: `tools/run_full_validation.ps1`
-- offline verifier: `tools/microdb_verify.c`
+- offline verifier: `tools/lox_verify.c`
 - baseline threshold tooling under `scripts/` for managed and fs matrix lanes
 
 ## Notes

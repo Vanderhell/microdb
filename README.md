@@ -1,42 +1,42 @@
-![microdb](docs/banner.svg)
+![loxdb](docs/banner.svg)
 
-# microdb
+# loxdb
 
 > Embedded database for microcontrollers.
 > Three engines. One malloc. Zero dependencies.
 > Deterministic durable storage core for MCU/embedded systems.
 
-[![CI](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml)
+[![CI](https://github.com/Vanderhell/loxdb/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanderhell/loxdb/actions/workflows/ci.yml)
 [![Language: C99](https://img.shields.io/badge/language-C99-blue)](https://en.wikipedia.org/wiki/C99)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Platform: MCU | Linux | Windows | macOS](https://img.shields.io/badge/platform-MCU%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS-informational)](https://github.com/Vanderhell/microdb)
-[![Tests](https://img.shields.io/badge/tests-ctest-brightgreen)](https://github.com/Vanderhell/microdb/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Vanderhell/microdb)](https://github.com/Vanderhell/microdb/releases)
-[![Wiki](https://img.shields.io/badge/docs-wiki-blue)](https://github.com/Vanderhell/microdb/wiki)
+[![Platform: MCU | Linux | Windows | macOS](https://img.shields.io/badge/platform-MCU%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS-informational)](https://github.com/Vanderhell/loxdb)
+[![Tests](https://img.shields.io/badge/tests-ctest-brightgreen)](https://github.com/Vanderhell/loxdb/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Vanderhell/loxdb)](https://github.com/Vanderhell/loxdb/releases)
+[![Wiki](https://img.shields.io/badge/docs-wiki-blue)](https://github.com/Vanderhell/loxdb/wiki)
 [![Contributing](https://img.shields.io/badge/contributions-welcome-success)](CONTRIBUTING.md)
 [![Security](https://img.shields.io/badge/security-policy-important)](SECURITY.md)
 
-## What is microdb?
+## What is loxdb?
 
-microdb is a compact embedded database written in C99 for firmware and small edge runtimes.
+loxdb is a compact embedded database written in C99 for firmware and small edge runtimes.
 It combines three storage models behind one API surface:
 
 - KV for configuration, caches, and TTL-backed state
 - Time-series for sensor samples and rolling telemetry
 - Relational for small indexed tables
 
-The library allocates exactly once in `microdb_init()`, runs without external dependencies,
+The library allocates exactly once in `lox_init()`, runs without external dependencies,
 and can operate either in RAM-only mode or with a storage HAL for persistence and WAL recovery.
 
 ## Free-tier additions (latest)
 
-- Runtime integrity API: `microdb_selfcheck(...)`
+- Runtime integrity API: `lox_selfcheck(...)`
 - WCET package:
-  - compile-time bounds: `include/microdb_wcet.h`
+  - compile-time bounds: `include/lox_wcet.h`
   - analysis guide: `docs/WCET_ANALYSIS.md`
 - TS logarithmic retention:
-  - policy: `MICRODB_TS_POLICY_LOG_RETAIN`
-  - extended registration: `microdb_ts_register_ex(...)`
+  - policy: `LOX_TS_POLICY_LOG_RETAIN`
+  - extended registration: `lox_ts_register_ex(...)`
 
 ## Product Contract
 
@@ -44,7 +44,7 @@ and can operate either in RAM-only mode or with a storage HAL for persistence an
 - Product brief (1 page): see [PRODUCT_BRIEF.md](docs/PRODUCT_BRIEF.md)
 - Profile guarantees and limits: see [PROFILE_GUARANTEES.md](docs/PROFILE_GUARANTEES.md)
 - Fail-code contract: see [FAIL_CODE_CONTRACT.md](docs/FAIL_CODE_CONTRACT.md)
-- Runtime error text helper: `microdb_err_to_string(microdb_err_t)`
+- Runtime error text helper: `lox_err_to_string(lox_err_t)`
 - Offline verifier contract: see [OFFLINE_VERIFIER.md](docs/OFFLINE_VERIFIER.md)
 - WCET analysis: see [WCET_ANALYSIS.md](docs/WCET_ANALYSIS.md)
 - Safety readiness package: see [SAFETY_READINESS.md](docs/SAFETY_READINESS.md)
@@ -71,7 +71,7 @@ and can operate either in RAM-only mode or with a storage HAL for persistence an
 ## Why not SQLite?
 
 SQLite is excellent, but it targets a different operating point.
-microdb is intentionally narrower:
+loxdb is intentionally narrower:
 
 - one malloc at init, no allocator churn during normal operation
 - fixed RAM budgeting across engines
@@ -79,34 +79,34 @@ microdb is intentionally narrower:
 - simpler persistence model for flash partitions and file-backed simulation
 
 If you need SQL, dynamic schemas, concurrent access, or large secondary indexes, use SQLite.
-If you need predictable memory and embedded-first behavior, microdb is the better fit.
+If you need predictable memory and embedded-first behavior, loxdb is the better fit.
 
 ## Quick start
 
 **1. Add to your project:**
 ```cmake
-add_subdirectory(microdb)
-target_link_libraries(your_app PRIVATE microdb)
+add_subdirectory(loxdb)
+target_link_libraries(your_app PRIVATE loxdb)
 ```
 
 **2. Configure and initialize:**
 ```c
-#define MICRODB_RAM_KB 32
-#include "microdb.h"
+#define LOX_RAM_KB 32
+#include "lox.h"
 
-static microdb_t db;
+static lox_t db;
 
-microdb_cfg_t cfg = {
+lox_cfg_t cfg = {
     .storage = NULL,   // RAM-only; provide HAL for persistence
     .now     = NULL,   // provide timestamp fn for TTL support
 };
-microdb_init(&db, &cfg);
+lox_init(&db, &cfg);
 ```
 
 ## C++ wrapper (incremental)
 
 Header:
-- `include/microdb_cpp.hpp`
+- `include/lox_cpp.hpp`
 
 Current wrapper surface:
 - lifecycle: `init/deinit/flush`
@@ -118,12 +118,12 @@ Current wrapper surface:
 
 Minimal example:
 ```cpp
-#include "microdb_cpp.hpp"
+#include "lox_cpp.hpp"
 
-microdb::cpp::Database db;
-microdb_cfg_t cfg{};
+loxdb::cpp::Database db;
+lox_cfg_t cfg{};
 cfg.ram_kb = 32u;
-if (db.init(cfg) != MICRODB_OK) { /* handle error */ }
+if (db.init(cfg) != LOX_OK) { /* handle error */ }
 
 uint8_t v = 7u, out = 0u;
 db.kv_put("k", &v, 1u);
@@ -138,77 +138,77 @@ db.deinit();
 
 ## Optional wrappers and adapter modules
 
-Core `microdb` is intentionally lean. Extra wrappers/adapters are separate modules and can be toggled in CMake.
+Core `loxdb` is intentionally lean. Extra wrappers/adapters are separate modules and can be toggled in CMake.
 
 Build toggles:
-- `MICRODB_BUILD_JSON_WRAPPER` (default `ON`)
-- `MICRODB_BUILD_IMPORT_EXPORT` (default `ON`)
-- `MICRODB_BUILD_OPTIONAL_BACKENDS` (default `ON`)
-- `MICRODB_BUILD_BACKEND_ALIGNED_STUB` / `MICRODB_BUILD_BACKEND_NAND_STUB` / `MICRODB_BUILD_BACKEND_EMMC_STUB` / `MICRODB_BUILD_BACKEND_SD_STUB` / `MICRODB_BUILD_BACKEND_FS_STUB` / `MICRODB_BUILD_BACKEND_BLOCK_STUB`
+- `LOX_BUILD_JSON_WRAPPER` (default `ON`)
+- `LOX_BUILD_IMPORT_EXPORT` (default `ON`)
+- `LOX_BUILD_OPTIONAL_BACKENDS` (default `ON`)
+- `LOX_BUILD_BACKEND_ALIGNED_STUB` / `LOX_BUILD_BACKEND_NAND_STUB` / `LOX_BUILD_BACKEND_EMMC_STUB` / `LOX_BUILD_BACKEND_SD_STUB` / `LOX_BUILD_BACKEND_FS_STUB` / `LOX_BUILD_BACKEND_BLOCK_STUB`
 
 Wrapper targets:
-- `microdb_json_wrapper`
-- `microdb_import_export` (links to `microdb_json_wrapper` when available)
-- `microdb_backend_registry`
-- `microdb_backend_compat`
-- `microdb_backend_decision`
-- `microdb_backend_aligned_adapter`
-- `microdb_backend_managed_adapter`
-- `microdb_backend_fs_adapter`
-- `microdb_backend_open`
+- `lox_json_wrapper`
+- `lox_import_export` (links to `lox_json_wrapper` when available)
+- `lox_backend_registry`
+- `lox_backend_compat`
+- `lox_backend_decision`
+- `lox_backend_aligned_adapter`
+- `lox_backend_managed_adapter`
+- `lox_backend_fs_adapter`
+- `lox_backend_open`
 
 Core contract:
-- optional modules are not linked into `microdb` core by default.
-- `microdb` must remain independent from optional wrapper/backend targets.
+- optional modules are not linked into `loxdb` core by default.
+- `loxdb` must remain independent from optional wrapper/backend targets.
 
 **3. Use all three engines:**
 ```c
 // Key-value
 float temp = 23.5f;
-microdb_kv_put(&db, "temperature", &temp, sizeof(temp));
+lox_kv_put(&db, "temperature", &temp, sizeof(temp));
 
 // Time-series
-microdb_ts_register(&db, "sensor", MICRODB_TS_F32, 0);
-microdb_ts_insert(&db, "sensor", time_now(), &temp);
+lox_ts_register(&db, "sensor", LOX_TS_F32, 0);
+lox_ts_insert(&db, "sensor", time_now(), &temp);
 
 // Relational
-microdb_schema_t schema;
-microdb_schema_init(&schema, "devices", 32);
-microdb_schema_add(&schema, "id",   MICRODB_COL_U16, 2, true);
-microdb_schema_add(&schema, "name", MICRODB_COL_STR, 16, false);
-microdb_schema_seal(&schema);
-microdb_table_create(&db, &schema);
+lox_schema_t schema;
+lox_schema_init(&schema, "devices", 32);
+lox_schema_add(&schema, "id",   LOX_COL_U16, 2, true);
+lox_schema_add(&schema, "name", LOX_COL_STR, 16, false);
+lox_schema_seal(&schema);
+lox_table_create(&db, &schema);
 ```
 
 ## Configuration
 
-Configuration is compile-time first, with a small runtime override surface in `microdb_cfg_t`.
+Configuration is compile-time first, with a small runtime override surface in `lox_cfg_t`.
 
-- `MICRODB_RAM_KB` sets the total heap budget
-- `MICRODB_RAM_KV_PCT`, `MICRODB_RAM_TS_PCT`, `MICRODB_RAM_REL_PCT` set default engine slices
+- `LOX_RAM_KB` sets the total heap budget
+- `LOX_RAM_KV_PCT`, `LOX_RAM_TS_PCT`, `LOX_RAM_REL_PCT` set default engine slices
 - `cfg.ram_kb` overrides the total budget per instance
 - `cfg.kv_pct`, `cfg.ts_pct`, `cfg.rel_pct` override the slice split per instance
-- `MICRODB_ENABLE_WAL` toggles WAL persistence when a storage HAL is present
+- `LOX_ENABLE_WAL` toggles WAL persistence when a storage HAL is present
 - `cfg.wal_sync_mode` selects WAL durability/latency mode:
-  - `MICRODB_WAL_SYNC_ALWAYS` (default): sync on each append, strongest per-op durability
-  - `MICRODB_WAL_SYNC_FLUSH_ONLY`: sync on explicit `microdb_flush()`, lower write latency
-  - see measured ESP32 tradeoffs in `bench/microdb_esp32_s3_bench/README.md` ("WAL Sync Mode Decision Table")
-- `MICRODB_LOG(level, fmt, ...)` enables internal diagnostic logging
-- smallest-size variant is available as CMake target `microdb_tiny` (KV-only, TS/REL/WAL disabled, weaker power-fail durability)
-- strict smallest **durable** profile is available as `MICRODB_PROFILE_FOOTPRINT_MIN` (KV + WAL + reopen/recovery contract)
+  - `LOX_WAL_SYNC_ALWAYS` (default): sync on each append, strongest per-op durability
+  - `LOX_WAL_SYNC_FLUSH_ONLY`: sync on explicit `lox_flush()`, lower write latency
+  - see measured ESP32 tradeoffs in `bench/lox_esp32_s3_bench/README.md` ("WAL Sync Mode Decision Table")
+- `LOX_LOG(level, fmt, ...)` enables internal diagnostic logging
+- smallest-size variant is available as CMake target `lox_tiny` (KV-only, TS/REL/WAL disabled, weaker power-fail durability)
+- strict smallest **durable** profile is available as `LOX_PROFILE_FOOTPRINT_MIN` (KV + WAL + reopen/recovery contract)
 
 Storage budget (separate from RAM budget):
-- storage capacity comes from `microdb_storage_t.capacity` (bytes)
-- geometry comes from `microdb_storage_t.erase_size` and `microdb_storage_t.write_size`
+- storage capacity comes from `lox_storage_t.capacity` (bytes)
+- geometry comes from `lox_storage_t.erase_size` and `lox_storage_t.write_size`
 - current fail-fast storage contract requires `erase_size > 0` and `write_size == 1`
-- use `tools/microdb_capacity_estimator.html` for storage/layout planning (`2/4/8/16/32 MiB` profiles)
+- use `tools/lox_capacity_estimator.html` for storage/layout planning (`2/4/8/16/32 MiB` profiles)
 
 ## KV engine
 
 The KV engine stores short keys with binary values and optional TTL.
 
 - fixed-size hash table with overwrite or reject overflow policy
-- LRU eviction for `MICRODB_KV_POLICY_OVERWRITE`
+- LRU eviction for `LOX_KV_POLICY_OVERWRITE`
 - TTL expiration checked on access
 - WAL-backed persistence for set, delete, and clear
 
@@ -219,7 +219,7 @@ The time-series engine stores named streams of `F32`, `I32`, `U32`, or raw sampl
 - one ring buffer per registered stream
 - range queries by timestamp
 - overflow policies: drop oldest, reject, downsample, or logarithmic retain
-- per-stream extended registration via `microdb_ts_register_ex(...)`
+- per-stream extended registration via `lox_ts_register_ex(...)`
 - WAL-backed persistence for inserts and stream metadata
 
 ## Relational engine
@@ -234,7 +234,7 @@ The relational engine stores small fixed schemas with packed rows.
 
 ## Storage HAL
 
-microdb supports three storage modes:
+loxdb supports three storage modes:
 
 - RAM-only: `cfg.storage = NULL`
 - POSIX file HAL for tests and simulation
@@ -265,9 +265,9 @@ microdb supports three storage modes:
 
 | Platform | Flash path | Notes |
 |---|---|---|
-| STM32F103 | Internal flash (`write_size=2`) | Requires `microdb_backend_aligned_adapter` |
-| STM32L4 | Internal flash (`write_size=8`) | Requires `microdb_backend_aligned_adapter` |
-| nRF5340 | Internal flash (`write_size=4`) | Requires `microdb_backend_aligned_adapter` |
+| STM32F103 | Internal flash (`write_size=2`) | Requires `lox_backend_aligned_adapter` |
+| STM32L4 | Internal flash (`write_size=8`) | Requires `lox_backend_aligned_adapter` |
+| nRF5340 | Internal flash (`write_size=4`) | Requires `lox_backend_aligned_adapter` |
 
 ### Not supported without larger changes
 
@@ -282,20 +282,20 @@ Notes:
 
 Persistent layout starts with a WAL region and then separate KV, TS, and REL regions aligned to the storage erase size.
 
-Core storage positioning: microdb core today natively supports byte-write durable backends; aligned/block/NAND media require a translation layer.
+Core storage positioning: loxdb core today natively supports byte-write durable backends; aligned/block/NAND media require a translation layer.
 
 Optional backend adapter modules (modular, not linked into core by default):
-- `microdb_backend_registry` (adapter registration layer)
-- `microdb_backend_compat` (open-time `direct` / `via_adapter` / `unsupported` classification)
-- `microdb_backend_aligned_adapter` (RMW byte-write shim for aligned-write media)
-- `microdb_backend_managed_adapter` (managed-media adapter skeleton for eMMC/SD/NAND via managed interface)
-- `microdb_backend_open` (decision + adapter wiring helper for optional backend flow)
+- `lox_backend_registry` (adapter registration layer)
+- `lox_backend_compat` (open-time `direct` / `via_adapter` / `unsupported` classification)
+- `lox_backend_aligned_adapter` (RMW byte-write shim for aligned-write media)
+- `lox_backend_managed_adapter` (managed-media adapter skeleton for eMMC/SD/NAND via managed interface)
+- `lox_backend_open` (decision + adapter wiring helper for optional backend flow)
 - stub modules for managed media (`nand/emmc/sd`) used for integration/testing flow
 
 Important:
 - `nand/emmc/sd` stubs are capability descriptors, not hardware drivers.
-- SD/eMMC integration still requires a real platform stack (for example FatFS/LittleFS over SDMMC/SPI, or vendor managed block API) mapped into `microdb_storage_t`.
-- Raw NAND is not a direct microdb target: you need a managed layer that handles ECC, bad blocks, and wear leveling, then place microdb above that layer.
+- SD/eMMC integration still requires a real platform stack (for example FatFS/LittleFS over SDMMC/SPI, or vendor managed block API) mapped into `lox_storage_t`.
+- Raw NAND is not a direct loxdb target: you need a managed layer that handles ECC, bad blocks, and wear leveling, then place loxdb above that layer.
 - See `examples/sd_fatfs_port/main.c` for a practical SD+FatFS glue skeleton.
 
 Managed adapter contract (fail-fast):
@@ -306,7 +306,7 @@ Managed adapter contract (fail-fast):
 - managed stress test covers mixed KV/TS/REL operations across repeated crash/power-loss reopen cycles
 - managed stress is sliced into `smoke` and `long` CTest lanes for faster default validation and deeper fault runs
 - both lanes now include explicit runtime envelope gates (`--max-ms`) in addition to CTest timeouts
-- lane budgets are calibrated through CMake cache vars: `MICRODB_MANAGED_STRESS_SMOKE_MAX_MS` and `MICRODB_MANAGED_STRESS_LONG_MAX_MS` (see `docs/MANAGED_STRESS_BASELINES.md`)
+- lane budgets are calibrated through CMake cache vars: `LOX_MANAGED_STRESS_SMOKE_MAX_MS` and `LOX_MANAGED_STRESS_LONG_MAX_MS` (see `docs/MANAGED_STRESS_BASELINES.md`)
 - CI uses `CMakePresets.json` (`ci-debug-linux`, `ci-debug-windows`) to apply platform-specific stress budgets consistently
 - release workflow now uses `CMakePresets.json` (`release-linux`, `release-windows`) with profile-specific stress budgets
 - scheduled baseline refresh workflow publishes runtime artifacts for ongoing threshold calibration
@@ -315,46 +315,46 @@ Managed adapter contract (fail-fast):
 - `scripts/apply-managed-thresholds.ps1` can apply recommendation JSON directly to preset budgets (`--dry-run` supported)
 - baseline refresh workflow publishes candidate preset patch artifacts (candidate `CMakePresets.json` + diff)
 
-Storage contract (fail-fast at `microdb_init`):
+Storage contract (fail-fast at `lox_init`):
 - `erase_size` must be `> 0`
 - `write_size` must be exactly `1`
-- `write_size == 0` or `write_size > 1` currently returns `MICRODB_ERR_INVALID`
+- `write_size == 0` or `write_size > 1` currently returns `LOX_ERR_INVALID`
 
 ## Read-only diagnostics API
 
 System stats are exposed through read-only APIs (not user KV keys):
 
-- `microdb_get_db_stats(...)`
-- `microdb_get_kv_stats(...)`
-- `microdb_get_ts_stats(...)`
-- `microdb_get_rel_stats(...)`
-- `microdb_get_effective_capacity(...)`
-- `microdb_get_pressure(...)`
-- `microdb_selfcheck(...)`
-- `microdb_admit_kv_set(...)`
-- `microdb_admit_ts_insert(...)`
-- `microdb_admit_rel_insert(...)`
+- `lox_get_db_stats(...)`
+- `lox_get_kv_stats(...)`
+- `lox_get_ts_stats(...)`
+- `lox_get_rel_stats(...)`
+- `lox_get_effective_capacity(...)`
+- `lox_get_pressure(...)`
+- `lox_selfcheck(...)`
+- `lox_admit_kv_set(...)`
+- `lox_admit_ts_insert(...)`
+- `lox_admit_rel_insert(...)`
 
 Admission preflight semantics:
-- API return value reports API-level validity (`MICRODB_OK` when request was analyzed)
-- final operation decision is in `microdb_admission_t.status`
+- API return value reports API-level validity (`LOX_OK` when request was analyzed)
+- final operation decision is in `lox_admission_t.status`
 - `would_compact` indicates compact pressure for the projected write
 - `would_degrade` indicates policy-driven degradation path (for example overwrite/drop-oldest)
 - `deterministic_budget_ok` indicates whether request fits deterministic budget
 
 Pressure semantics:
-- `microdb_get_pressure(...)` exposes `kv/ts/rel/wal` fill percentages
+- `lox_get_pressure(...)` exposes `kv/ts/rel/wal` fill percentages
 - `compact_pressure_pct` expresses WAL fill relative to compact threshold
 - `near_full_risk_pct` is max pressure signal across engines/WAL
 
 ## Migrations vs Snapshots
 
-microdb has three different concepts that are easy to mix up:
+loxdb has three different concepts that are easy to mix up:
 
 1. Schema migrations (public API)
 - REL schema upgrades are driven by `schema_version` + `cfg.on_migrate`.
-- Trigger point is `microdb_table_create(...)` when an existing table version differs.
-- Without `on_migrate`, version mismatch returns `MICRODB_ERR_SCHEMA`.
+- Trigger point is `lox_table_create(...)` when an existing table version differs.
+- Without `on_migrate`, version mismatch returns `LOX_ERR_SCHEMA`.
 - See `docs/SCHEMA_MIGRATION_GUIDE.md`.
 
 2. Durable snapshots (internal durability mechanism)
@@ -364,18 +364,18 @@ microdb has three different concepts that are easy to mix up:
 
 3. Query-time snapshot semantics (iteration consistency)
 - TS/REL query/iter paths capture mutation state and validate after callback re-lock.
-- If concurrent mutation is detected, APIs return `MICRODB_ERR_MODIFIED`.
+- If concurrent mutation is detected, APIs return `LOX_ERR_MODIFIED`.
 - This protects traversal consistency; it is separate from durable storage snapshots.
 
 Semantics:
-- `last_runtime_error` is sticky last non-`MICRODB_OK` runtime status since `microdb_init`
+- `last_runtime_error` is sticky last non-`LOX_OK` runtime status since `lox_init`
 - `last_recovery_status` is status of the last open/recovery path step in this process lifetime
 - `compact_count`, `reopen_count`, `recovery_count` are runtime-only counters (not persistent)
 - REL uses `rows_free` (free slots), not a historical deleted-rows counter
 
 ## RAM budget guide
 
-| MICRODB_RAM_KB | KV entries (est.) | TS samples/stream (est.) | REL rows (est.) | Typical use |
+| LOX_RAM_KB | KV entries (est.) | TS samples/stream (est.) | REL rows (est.) | Typical use |
 |---------------|-------------------|--------------------------|-----------------|-------------|
 | 8 KB          | ~3                | ~32                      | ~4              | Ultra-tiny KV-focused profile |
 | 16 KB         | ~40               | ~136                     | ~8              | Small MCU baseline |
@@ -385,18 +385,18 @@ Semantics:
 | 256 KB        | ~600              | ~12 000                  | ~320            | High-retention edge node |
 | 512 KB        | ~1 200            | ~24 000                  | ~640            | Linux embedded |
 | 1024 KB       | ~2 500            | ~48 000                  | ~1 300          | Resource-rich MCU |
-| txn staging overhead | `MICRODB_TXN_STAGE_KEYS * sizeof(microdb_txn_stage_entry_t)` bytes | same | same | Reserved from KV slice |
+| txn staging overhead | `LOX_TXN_STAGE_KEYS * sizeof(lox_txn_stage_entry_t)` bytes | same | same | Reserved from KV slice |
 
 Estimates assume default 40/40/20 RAM split and default column sizes.
-Override with `MICRODB_RAM_KV_PCT`, `MICRODB_RAM_TS_PCT`, `MICRODB_RAM_REL_PCT`.
+Override with `LOX_RAM_KV_PCT`, `LOX_RAM_TS_PCT`, `LOX_RAM_REL_PCT`.
 
 Capacity planning helper:
-- open `tools/microdb_capacity_estimator.html` for profile-based storage/layout estimation (`2/4/8/16/32 MiB`) and rough record-fit planning.
+- open `tools/lox_capacity_estimator.html` for profile-based storage/layout estimation (`2/4/8/16/32 MiB`) and rough record-fit planning.
 
 ## Design decisions and known limitations
 
 **Single malloc at init.**
-microdb allocates exactly once in `microdb_init()` and never again.
+loxdb allocates exactly once in `lox_init()` and never again.
 This makes memory usage predictable and eliminates heap fragmentation -
 a critical property for long-running embedded systems.
 
@@ -405,7 +405,7 @@ Each engine gets a fixed percentage of the RAM budget at init time.
 There is no automatic redistribution if one engine fills up while another
 has free space. This is intentional - dynamic redistribution would require
 a runtime allocator, breaking the single-malloc guarantee.
-Workaround: tune `kv_pct`, `ts_pct`, `rel_pct` in `microdb_cfg_t` for your use case.
+Workaround: tune `kv_pct`, `ts_pct`, `rel_pct` in `lox_cfg_t` for your use case.
 
 **One index per relational table.**
 Each table supports one indexed column for O(log n) lookups.
@@ -415,15 +415,15 @@ Secondary indexes are not planned for v1.x.
 
 **LRU eviction is O(n).**
 When KV store is full and overflow policy is OVERWRITE, finding the LRU entry
-requires scanning all buckets. At `MICRODB_KV_MAX_KEYS=64` this is 64 comparisons.
-For embedded use cases this is negligible. Not suitable for `MICRODB_KV_MAX_KEYS > 1000`.
+requires scanning all buckets. At `LOX_KV_MAX_KEYS=64` this is 64 comparisons.
+For embedded use cases this is negligible. Not suitable for `LOX_KV_MAX_KEYS > 1000`.
 
 **Optional hook-based thread safety.**
-Enable `MICRODB_THREAD_SAFE=1` and provide `lock_create/lock/unlock/lock_destroy`
-hooks in `microdb_cfg_t` to integrate your RTOS/application mutex.
+Enable `LOX_THREAD_SAFE=1` and provide `lock_create/lock/unlock/lock_destroy`
+hooks in `lox_cfg_t` to integrate your RTOS/application mutex.
 
 **No built-in compression or encryption.**
-If your product needs those, apply them in your application layer before calling microdb APIs.
+If your product needs those, apply them in your application layer before calling loxdb APIs.
 
 ## Test coverage
 
@@ -441,7 +441,7 @@ The repository covers:
 
 ## Integration note
 
-microdb is storage-focused. Transport, serialization, and cryptography are handled by surrounding application components.
+loxdb is storage-focused. Transport, serialization, and cryptography are handled by surrounding application components.
 
 ## Wiki
 

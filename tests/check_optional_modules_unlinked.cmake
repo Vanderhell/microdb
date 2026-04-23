@@ -24,12 +24,12 @@ if(NOT _rc EQUAL 0)
 endif()
 
 foreach(_sym
-        microdb_json_kv_set_u32
-        microdb_json_encode_kv_record
-        microdb_ie_export_kv_json
-        microdb_ie_import_kv_json
-        microdb_ie_export_ts_json
-        microdb_ie_export_rel_json)
+        lox_json_kv_set_u32
+        lox_json_encode_kv_record
+        lox_ie_export_kv_json
+        lox_ie_import_kv_json
+        lox_ie_export_ts_json
+        lox_ie_export_rel_json)
     string(FIND "${_out}" "${_sym}" _pos)
     if(NOT _pos EQUAL -1)
         message(FATAL_ERROR "Optional module symbol leaked into core library: ${_sym}")

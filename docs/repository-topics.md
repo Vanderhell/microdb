@@ -1,6 +1,6 @@
 # Recommended Repository Topics
 
-Suggested GitHub repository topics for `Vanderhell/microdb`:
+Suggested GitHub repository topics for `Vanderhell/loxdb`:
 
 - `c`
 - `c99`

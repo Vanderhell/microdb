@@ -1,11 +1,11 @@
 # Aligned Block Port Skeleton
 
-This example shows how to integrate `microdb` on storage media that cannot do byte writes directly.
+This example shows how to integrate `loxdb` on storage media that cannot do byte writes directly.
 
 Scenario:
 
 - raw medium has `write_size > 1` (for example 4 or 8 bytes)
-- microdb core still requires byte-write contract
+- loxdb core still requires byte-write contract
 - aligned adapter bridges the gap with bounce-buffer read-modify-write behavior
 
 Files:
@@ -14,15 +14,15 @@ Files:
 
 Key lifecycle:
 
-1. Fill raw `microdb_storage_t` with native media geometry (`write_size > 1`).
-2. Call `microdb_backend_aligned_adapter_init(...)`.
-3. Pass adapted storage into `microdb_init(...)`.
-4. On shutdown call `microdb_backend_aligned_adapter_deinit(...)`.
+1. Fill raw `lox_storage_t` with native media geometry (`write_size > 1`).
+2. Call `lox_backend_aligned_adapter_init(...)`.
+3. Pass adapted storage into `lox_init(...)`.
+4. On shutdown call `lox_backend_aligned_adapter_deinit(...)`.
 
 Sync expectations:
 
 - raw `sync()` must return success only when pending data is durable enough for your policy.
-- if erase/write is asynchronous in the underlying driver, complete it before returning `MICRODB_OK`.
+- if erase/write is asynchronous in the underlying driver, complete it before returning `LOX_OK`.
 
 Reference docs:
 

@@ -109,16 +109,16 @@ foreach ($m in $map) {
         continue
     }
 
-    $oldSmoke = [string]$preset.cacheVariables.MICRODB_FS_MATRIX_SMOKE_MAX_MS
-    $oldLong = [string]$preset.cacheVariables.MICRODB_FS_MATRIX_LONG_MAX_MS
+    $oldSmoke = [string]$preset.cacheVariables.LOX_FS_MATRIX_SMOKE_MAX_MS
+    $oldLong = [string]$preset.cacheVariables.LOX_FS_MATRIX_LONG_MAX_MS
     $newSmoke = [string]$smokeRec
     $newLong = [string]$longRec
 
     if ($oldSmoke -ne $newSmoke) {
-        $preset.cacheVariables.MICRODB_FS_MATRIX_SMOKE_MAX_MS = $newSmoke
+        $preset.cacheVariables.LOX_FS_MATRIX_SMOKE_MAX_MS = $newSmoke
     }
     if ($oldLong -ne $newLong) {
-        $preset.cacheVariables.MICRODB_FS_MATRIX_LONG_MAX_MS = $newLong
+        $preset.cacheVariables.LOX_FS_MATRIX_LONG_MAX_MS = $newLong
     }
 
     $changes += [PSCustomObject]@{

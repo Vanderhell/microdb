@@ -1,6 +1,6 @@
 # Documentation Map
 
-This page is the central navigation entry for `microdb` docs.
+This page is the central navigation entry for `loxdb` docs.
 
 ## Start Here
 

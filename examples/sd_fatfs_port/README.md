@@ -1,9 +1,9 @@
 # SD + FatFS Port Skeleton
 
-This example shows practical glue for running `microdb` on SD storage via FatFS.
+This example shows practical glue for running `loxdb` on SD storage via FatFS.
 
 What it is:
-- a minimal `microdb_storage_t` mapping over a single fixed-size file (`microdb.bin`)
+- a minimal `lox_storage_t` mapping over a single fixed-size file (`loxdb.bin`)
 - intended as a bring-up template for ESP32/STM32-class SDMMC or SPI-SD stacks
 
 What it is not:

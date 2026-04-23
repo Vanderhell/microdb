@@ -1,6 +1,6 @@
-# Contributing to microdb
+# Contributing to loxdb
 
-Thank you for contributing to `microdb`.
+Thank you for contributing to `loxdb`.
 
 ## Ground Rules
 

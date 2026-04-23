@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-#include "microdb.h"
+#include "lox.h"
 
 #include <stdint.h>
 #include <string.h>
 
 /*
- * FreeRTOS port skeleton for microdb.
+ * FreeRTOS port skeleton for loxdb.
  *
  * Replace TODO blocks with your platform driver + FreeRTOS mutex primitives.
  * This file is intentionally not wired into repo CMake targets; use it as a template.
@@ -19,42 +19,42 @@ typedef struct {
 } app_freertos_ctx_t;
 
 static app_freertos_ctx_t g_ctx;
-static microdb_storage_t g_storage;
-static microdb_t g_db;
+static lox_storage_t g_storage;
+static lox_t g_db;
 
-static microdb_err_t app_storage_read(void *ctx, uint32_t offset, void *buf, size_t len) {
+static lox_err_t app_storage_read(void *ctx, uint32_t offset, void *buf, size_t len) {
     app_freertos_ctx_t *c = (app_freertos_ctx_t *)ctx;
     (void)c;
     (void)offset;
     (void)buf;
     (void)len;
     /* TODO: map to your platform read API. */
-    return MICRODB_ERR_DISABLED;
+    return LOX_ERR_DISABLED;
 }
 
-static microdb_err_t app_storage_write(void *ctx, uint32_t offset, const void *buf, size_t len) {
+static lox_err_t app_storage_write(void *ctx, uint32_t offset, const void *buf, size_t len) {
     app_freertos_ctx_t *c = (app_freertos_ctx_t *)ctx;
     (void)c;
     (void)offset;
     (void)buf;
     (void)len;
     /* TODO: map to your platform write API. */
-    return MICRODB_ERR_DISABLED;
+    return LOX_ERR_DISABLED;
 }
 
-static microdb_err_t app_storage_erase(void *ctx, uint32_t offset) {
+static lox_err_t app_storage_erase(void *ctx, uint32_t offset) {
     app_freertos_ctx_t *c = (app_freertos_ctx_t *)ctx;
     (void)c;
     (void)offset;
     /* TODO: erase one block at offset. */
-    return MICRODB_ERR_DISABLED;
+    return LOX_ERR_DISABLED;
 }
 
-static microdb_err_t app_storage_sync(void *ctx) {
+static lox_err_t app_storage_sync(void *ctx) {
     app_freertos_ctx_t *c = (app_freertos_ctx_t *)ctx;
     (void)c;
     /* TODO: ensure pending storage ops are durable before return. */
-    return MICRODB_ERR_DISABLED;
+    return LOX_ERR_DISABLED;
 }
 
 /*
@@ -85,7 +85,7 @@ static void app_lock_destroy(void *hdl) {
     /* TODO: vSemaphoreDelete(...) */
 }
 
-static void app_storage_fill(microdb_storage_t *s, app_freertos_ctx_t *ctx) {
+static void app_storage_fill(lox_storage_t *s, app_freertos_ctx_t *ctx) {
     memset(s, 0, sizeof(*s));
     s->read = app_storage_read;
     s->write = app_storage_write;
@@ -97,8 +97,8 @@ static void app_storage_fill(microdb_storage_t *s, app_freertos_ctx_t *ctx) {
     s->ctx = ctx;
 }
 
-int app_microdb_init(void) {
-    microdb_cfg_t cfg;
+int app_lox_init(void) {
+    lox_cfg_t cfg;
 
     memset(&cfg, 0, sizeof(cfg));
     memset(&g_ctx, 0, sizeof(g_ctx));
@@ -111,6 +111,6 @@ int app_microdb_init(void) {
     cfg.unlock = app_unlock;
     cfg.lock_destroy = app_lock_destroy;
 
-    return microdb_init(&g_db, &cfg);
+    return lox_init(&g_db, &cfg);
 }
 

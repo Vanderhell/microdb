@@ -1,6 +1,6 @@
 # FreeRTOS Port Skeleton
 
-This folder is a template for integrating `microdb` on FreeRTOS-based targets.
+This folder is a template for integrating `loxdb` on FreeRTOS-based targets.
 
 File:
 

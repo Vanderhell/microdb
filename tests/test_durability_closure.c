@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "microtest.h"
-#include "microdb.h"
-#include "../src/microdb_internal.h"
+#include "lox.h"
+#include "../src/lox_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -22,12 +22,12 @@ typedef struct {
 } fi_store_t;
 
 static fi_store_t g_store;
-static microdb_storage_t g_storage;
-static microdb_t g_db;
-static microdb_cfg_t g_cfg;
+static lox_storage_t g_storage;
+static lox_t g_db;
+static lox_cfg_t g_cfg;
 static uint32_t g_now = 1000u;
 
-static microdb_timestamp_t mock_now(void) {
+static lox_timestamp_t mock_now(void) {
     return g_now++;
 }
 
@@ -46,61 +46,61 @@ static void fi_record(char op, uint32_t off) {
     }
 }
 
-static microdb_err_t fi_maybe_fail(void) {
+static lox_err_t fi_maybe_fail(void) {
     g_store.step++;
     if (g_store.fail_at_step > 0 && g_store.step == g_store.fail_at_step) {
-        return MICRODB_ERR_STORAGE;
+        return LOX_ERR_STORAGE;
     }
-    return MICRODB_OK;
+    return LOX_OK;
 }
 
-static microdb_err_t fi_read(void *ctx, uint32_t offset, void *buf, size_t len) {
+static lox_err_t fi_read(void *ctx, uint32_t offset, void *buf, size_t len) {
     (void)ctx;
     if ((size_t)offset + len > FI_CAPACITY) {
-        return MICRODB_ERR_STORAGE;
+        return LOX_ERR_STORAGE;
     }
     memcpy(buf, &g_store.bytes[offset], len);
-    return MICRODB_OK;
+    return LOX_OK;
 }
 
-static microdb_err_t fi_write(void *ctx, uint32_t offset, const void *buf, size_t len) {
+static lox_err_t fi_write(void *ctx, uint32_t offset, const void *buf, size_t len) {
     (void)ctx;
     if ((size_t)offset + len > FI_CAPACITY) {
-        return MICRODB_ERR_STORAGE;
+        return LOX_ERR_STORAGE;
     }
     fi_record('W', offset);
-    if (fi_maybe_fail() != MICRODB_OK) {
-        return MICRODB_ERR_STORAGE;
+    if (fi_maybe_fail() != LOX_OK) {
+        return LOX_ERR_STORAGE;
     }
     memcpy(&g_store.bytes[offset], buf, len);
-    return MICRODB_OK;
+    return LOX_OK;
 }
 
-static microdb_err_t fi_erase(void *ctx, uint32_t offset) {
+static lox_err_t fi_erase(void *ctx, uint32_t offset) {
     uint32_t start;
     (void)ctx;
     if (offset >= FI_CAPACITY) {
-        return MICRODB_ERR_STORAGE;
+        return LOX_ERR_STORAGE;
     }
     fi_record('E', offset);
-    if (fi_maybe_fail() != MICRODB_OK) {
-        return MICRODB_ERR_STORAGE;
+    if (fi_maybe_fail() != LOX_OK) {
+        return LOX_ERR_STORAGE;
     }
     start = (offset / FI_ERASE) * FI_ERASE;
     if (start + FI_ERASE > FI_CAPACITY) {
-        return MICRODB_ERR_STORAGE;
+        return LOX_ERR_STORAGE;
     }
     memset(&g_store.bytes[start], 0xFF, FI_ERASE);
-    return MICRODB_OK;
+    return LOX_OK;
 }
 
-static microdb_err_t fi_sync(void *ctx) {
+static lox_err_t fi_sync(void *ctx) {
     (void)ctx;
     fi_record('S', 0xFFFFFFFFu);
-    if (fi_maybe_fail() != MICRODB_OK) {
-        return MICRODB_ERR_STORAGE;
+    if (fi_maybe_fail() != LOX_OK) {
+        return LOX_ERR_STORAGE;
     }
-    return MICRODB_OK;
+    return LOX_OK;
 }
 
 static void setup_storage(void) {
@@ -121,36 +121,36 @@ static void setup_db(void) {
     g_cfg.storage = &g_storage;
     g_cfg.ram_kb = 32u;
     g_cfg.now = mock_now;
-    ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &g_cfg), LOX_OK);
 }
 
 static void crash_reopen(void) {
-    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
-        free(microdb_core(&g_db)->heap);
+    if (lox_core_const(&g_db)->magic == LOX_MAGIC) {
+        free(lox_core(&g_db)->heap);
     }
     memset(&g_db, 0, sizeof(g_db));
-    ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &g_cfg), LOX_OK);
 }
 
 static void clean_reopen(void) {
-    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
-        microdb_err_t rc = microdb_deinit(&g_db);
-        ASSERT_EQ(rc, MICRODB_OK);
-        if (rc != MICRODB_OK && microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
-            free(microdb_core(&g_db)->heap);
+    if (lox_core_const(&g_db)->magic == LOX_MAGIC) {
+        lox_err_t rc = lox_deinit(&g_db);
+        ASSERT_EQ(rc, LOX_OK);
+        if (rc != LOX_OK && lox_core_const(&g_db)->magic == LOX_MAGIC) {
+            free(lox_core(&g_db)->heap);
             memset(&g_db, 0, sizeof(g_db));
         }
     } else {
         memset(&g_db, 0, sizeof(g_db));
     }
-    ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &g_cfg), LOX_OK);
 }
 
 static void teardown_db(void) {
-    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
-        microdb_err_t rc = microdb_deinit(&g_db);
-        if (rc != MICRODB_OK && microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
-            free(microdb_core(&g_db)->heap);
+    if (lox_core_const(&g_db)->magic == LOX_MAGIC) {
+        lox_err_t rc = lox_deinit(&g_db);
+        if (rc != LOX_OK && lox_core_const(&g_db)->magic == LOX_MAGIC) {
+            free(lox_core(&g_db)->heap);
             memset(&g_db, 0, sizeof(g_db));
         }
     }
@@ -166,46 +166,46 @@ static void fini_fixture(void) {
     teardown_db();
 }
 
-static void create_rel_users(microdb_t *db, microdb_table_t **out) {
-    microdb_schema_t schema;
-    ASSERT_EQ(microdb_schema_init(&schema, "users", 128u), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_add(&schema, "id", MICRODB_COL_U32, sizeof(uint32_t), true), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_add(&schema, "age", MICRODB_COL_U8, sizeof(uint8_t), false), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_seal(&schema), MICRODB_OK);
-    ASSERT_EQ(microdb_table_create(db, &schema), MICRODB_OK);
-    ASSERT_EQ(microdb_table_get(db, "users", out), MICRODB_OK);
+static void create_rel_users(lox_t *db, lox_table_t **out) {
+    lox_schema_t schema;
+    ASSERT_EQ(lox_schema_init(&schema, "users", 128u), LOX_OK);
+    ASSERT_EQ(lox_schema_add(&schema, "id", LOX_COL_U32, sizeof(uint32_t), true), LOX_OK);
+    ASSERT_EQ(lox_schema_add(&schema, "age", LOX_COL_U8, sizeof(uint8_t), false), LOX_OK);
+    ASSERT_EQ(lox_schema_seal(&schema), LOX_OK);
+    ASSERT_EQ(lox_table_create(db, &schema), LOX_OK);
+    ASSERT_EQ(lox_table_get(db, "users", out), LOX_OK);
 }
 
 static void seed_mixed_state(void) {
-    microdb_table_t *table = NULL;
+    lox_table_t *table = NULL;
     uint8_t row[64] = { 0 };
     uint32_t id = 7u;
     uint8_t age = 42u;
     uint8_t kv = 9u;
     uint32_t tsv = 77u;
 
-    ASSERT_EQ(microdb_kv_set(&g_db, "anchor", &kv, 1u, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_ts_register(&g_db, "stream", MICRODB_TS_U32, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_ts_insert(&g_db, "stream", 11u, &tsv), MICRODB_OK);
+    ASSERT_EQ(lox_kv_set(&g_db, "anchor", &kv, 1u, 0u), LOX_OK);
+    ASSERT_EQ(lox_ts_register(&g_db, "stream", LOX_TS_U32, 0u), LOX_OK);
+    ASSERT_EQ(lox_ts_insert(&g_db, "stream", 11u, &tsv), LOX_OK);
     create_rel_users(&g_db, &table);
-    ASSERT_EQ(microdb_row_set(table, row, "id", &id), MICRODB_OK);
-    ASSERT_EQ(microdb_row_set(table, row, "age", &age), MICRODB_OK);
-    ASSERT_EQ(microdb_rel_insert(&g_db, table, row), MICRODB_OK);
+    ASSERT_EQ(lox_row_set(table, row, "id", &id), LOX_OK);
+    ASSERT_EQ(lox_row_set(table, row, "age", &age), LOX_OK);
+    ASSERT_EQ(lox_rel_insert(&g_db, table, row), LOX_OK);
 }
 
 static void verify_anchor_state(void) {
     uint8_t kv = 0u;
-    microdb_ts_sample_t sample;
-    microdb_table_t *table = NULL;
+    lox_ts_sample_t sample;
+    lox_table_t *table = NULL;
     uint8_t row[64] = { 0 };
     uint32_t id = 7u;
 
-    ASSERT_EQ(microdb_kv_get(&g_db, "anchor", &kv, 1u, NULL), MICRODB_OK);
+    ASSERT_EQ(lox_kv_get(&g_db, "anchor", &kv, 1u, NULL), LOX_OK);
     ASSERT_EQ(kv, 9u);
-    ASSERT_EQ(microdb_ts_last(&g_db, "stream", &sample), MICRODB_OK);
+    ASSERT_EQ(lox_ts_last(&g_db, "stream", &sample), LOX_OK);
     ASSERT_EQ(sample.v.u32, 77u);
-    ASSERT_EQ(microdb_table_get(&g_db, "users", &table), MICRODB_OK);
-    ASSERT_EQ(microdb_rel_find_by(&g_db, table, "id", &id, row), MICRODB_OK);
+    ASSERT_EQ(lox_table_get(&g_db, "users", &table), LOX_OK);
+    ASSERT_EQ(lox_rel_find_by(&g_db, table, "id", &id, row), LOX_OK);
 }
 
 MDB_TEST(power_cut_after_each_compact_step_keeps_committed_state) {
@@ -214,7 +214,7 @@ MDB_TEST(power_cut_after_each_compact_step_keeps_committed_state) {
     int saw_success = 0;
 
     seed_mixed_state();
-    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_flush(&g_db), LOX_OK);
     memcpy(baseline, g_store.bytes, sizeof(baseline));
     clean_reopen();
 
@@ -224,7 +224,7 @@ MDB_TEST(power_cut_after_each_compact_step_keeps_committed_state) {
         g_store.step = 0;
         g_store.trace_count = 0u;
         g_store.fail_at_step = (int32_t)fp;
-        if (microdb_compact(&g_db) == MICRODB_OK) {
+        if (lox_compact(&g_db) == LOX_OK) {
             saw_success = 1;
         }
         g_store.fail_at_step = -1;
@@ -245,16 +245,16 @@ MDB_TEST(power_cut_after_superblock_write_before_sync_keeps_old_state) {
     int32_t target_fail = -1;
 
     seed_mixed_state();
-    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_flush(&g_db), LOX_OK);
     memcpy(baseline, g_store.bytes, sizeof(baseline));
 
     g_store.fail_at_step = -1;
     g_store.step = 0;
     g_store.trace_count = 0u;
-    ASSERT_EQ(microdb_compact(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_compact(&g_db), LOX_OK);
     for (i = 1u; i < g_store.trace_count; ++i) {
         if (g_store.trace_op[i - 1u] == 'W') {
-            const microdb_core_t *core = microdb_core_const(&g_db);
+            const lox_core_t *core = lox_core_const(&g_db);
             if (g_store.trace_off[i - 1u] == core->layout.super_a_offset ||
                 g_store.trace_off[i - 1u] == core->layout.super_b_offset) {
                 if (g_store.trace_op[i] == 'S') {
@@ -269,70 +269,70 @@ MDB_TEST(power_cut_after_superblock_write_before_sync_keeps_old_state) {
     memcpy(g_store.bytes, baseline, sizeof(baseline));
     teardown_db();
     memset(&g_db, 0, sizeof(g_db));
-    ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &g_cfg), LOX_OK);
     g_store.fail_at_step = target_fail;
-    (void)microdb_compact(&g_db);
+    (void)lox_compact(&g_db);
     g_store.fail_at_step = -1;
     crash_reopen();
     verify_anchor_state();
 }
 
 MDB_TEST(corrupt_superblock_a_only_boots_from_other_copy) {
-    microdb_core_t *core;
+    lox_core_t *core;
     seed_mixed_state();
-    core = microdb_core(&g_db);
+    core = lox_core(&g_db);
     while ((core->layout.active_generation & 1u) != 0u) {
-        ASSERT_EQ(microdb_compact(&g_db), MICRODB_OK);
-        core = microdb_core(&g_db);
+        ASSERT_EQ(lox_compact(&g_db), LOX_OK);
+        core = lox_core(&g_db);
     }
-    core = microdb_core(&g_db);
+    core = lox_core(&g_db);
     g_store.bytes[core->layout.super_a_offset + 20u] ^= 0x5Au;
     crash_reopen();
     verify_anchor_state();
 }
 
 MDB_TEST(corrupt_superblock_b_only_boots_from_other_copy) {
-    microdb_core_t *core;
+    lox_core_t *core;
     seed_mixed_state();
-    ASSERT_EQ(microdb_compact(&g_db), MICRODB_OK);
-    core = microdb_core(&g_db);
+    ASSERT_EQ(lox_compact(&g_db), LOX_OK);
+    core = lox_core(&g_db);
     g_store.bytes[core->layout.super_b_offset + 20u] ^= 0xA5u;
     crash_reopen();
     verify_anchor_state();
 }
 
 MDB_TEST(corrupt_active_page_header_crc_fails_boot) {
-    microdb_core_t *core;
+    lox_core_t *core;
     seed_mixed_state();
-    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
-    core = microdb_core(&g_db);
+    ASSERT_EQ(lox_flush(&g_db), LOX_OK);
+    core = lox_core(&g_db);
     g_store.bytes[core->layout.active_bank == 0u ? core->layout.bank_a_offset + 24u : core->layout.bank_b_offset + 24u] ^= 0x11u;
-    free(microdb_core(&g_db)->heap);
+    free(lox_core(&g_db)->heap);
     memset(&g_db, 0, sizeof(g_db));
-    ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_ERR_CORRUPT);
+    ASSERT_EQ(lox_init(&g_db, &g_cfg), LOX_ERR_CORRUPT);
 }
 
 MDB_TEST(corrupt_active_page_payload_crc_fails_boot) {
-    microdb_core_t *core;
+    lox_core_t *core;
     uint32_t kv_page_base;
     seed_mixed_state();
-    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
-    core = microdb_core(&g_db);
+    ASSERT_EQ(lox_flush(&g_db), LOX_OK);
+    core = lox_core(&g_db);
     kv_page_base = (core->layout.active_bank == 0u) ? core->layout.bank_a_offset : core->layout.bank_b_offset;
     g_store.bytes[kv_page_base + 32u] ^= 0x22u;
-    free(microdb_core(&g_db)->heap);
+    free(lox_core(&g_db)->heap);
     memset(&g_db, 0, sizeof(g_db));
-    ASSERT_EQ(microdb_init(&g_db, &g_cfg), MICRODB_ERR_CORRUPT);
+    ASSERT_EQ(lox_init(&g_db, &g_cfg), LOX_ERR_CORRUPT);
 }
 
 MDB_TEST(valid_old_bank_broken_new_bank_recovers_old) {
     uint8_t baseline[FI_CAPACITY];
     seed_mixed_state();
-    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_flush(&g_db), LOX_OK);
     memcpy(baseline, g_store.bytes, sizeof(baseline));
     clean_reopen();
     g_store.fail_at_step = 2;
-    (void)microdb_compact(&g_db);
+    (void)lox_compact(&g_db);
     g_store.fail_at_step = -1;
     crash_reopen();
     verify_anchor_state();
@@ -340,13 +340,13 @@ MDB_TEST(valid_old_bank_broken_new_bank_recovers_old) {
 }
 
 MDB_TEST(valid_new_bank_broken_old_bank_still_boots) {
-    microdb_core_t *core;
+    lox_core_t *core;
     uint32_t old_bank;
     uint32_t old_kv_offset;
 
     seed_mixed_state();
-    ASSERT_EQ(microdb_compact(&g_db), MICRODB_OK);
-    core = microdb_core(&g_db);
+    ASSERT_EQ(lox_compact(&g_db), LOX_OK);
+    core = lox_core(&g_db);
     old_bank = (core->layout.active_bank == 0u) ? 1u : 0u;
     old_kv_offset = (old_bank == 0u) ? core->layout.bank_a_offset : core->layout.bank_b_offset;
     g_store.bytes[old_kv_offset + 0u] ^= 0xFFu;
@@ -358,27 +358,27 @@ MDB_TEST(txn_batch_without_commit_marker_is_discarded_on_replay) {
     uint8_t v = 44u;
     uint8_t out = 0u;
 
-    ASSERT_EQ(microdb_persist_kv_set_txn(&g_db, "tkey", &v, 1u, 0u), MICRODB_OK);
+    ASSERT_EQ(lox_persist_kv_set_txn(&g_db, "tkey", &v, 1u, 0u), LOX_OK);
     crash_reopen();
-    ASSERT_EQ(microdb_kv_get(&g_db, "tkey", &out, 1u, NULL), MICRODB_ERR_NOT_FOUND);
+    ASSERT_EQ(lox_kv_get(&g_db, "tkey", &out, 1u, NULL), LOX_ERR_NOT_FOUND);
 }
 
 MDB_TEST(txn_batch_with_commit_marker_replays_after_crash) {
     uint8_t v = 55u;
     uint8_t out = 0u;
 
-    ASSERT_EQ(microdb_persist_kv_set_txn(&g_db, "tkey2", &v, 1u, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_persist_txn_commit(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_persist_kv_set_txn(&g_db, "tkey2", &v, 1u, 0u), LOX_OK);
+    ASSERT_EQ(lox_persist_txn_commit(&g_db), LOX_OK);
     crash_reopen();
-    ASSERT_EQ(microdb_kv_get(&g_db, "tkey2", &out, 1u, NULL), MICRODB_OK);
+    ASSERT_EQ(lox_kv_get(&g_db, "tkey2", &out, 1u, NULL), LOX_OK);
     ASSERT_EQ(out, 55u);
 }
 
 MDB_TEST(repeated_crash_reboot_cycles_mixed_workload) {
-    microdb_table_t *table = NULL;
+    lox_table_t *table = NULL;
     uint32_t i;
 
-    ASSERT_EQ(microdb_ts_register(&g_db, "mix", MICRODB_TS_U32, 0u), MICRODB_OK);
+    ASSERT_EQ(lox_ts_register(&g_db, "mix", LOX_TS_U32, 0u), LOX_OK);
     create_rel_users(&g_db, &table);
     for (i = 0u; i < 24u; ++i) {
         uint8_t kv = (uint8_t)(i + 1u);
@@ -390,17 +390,17 @@ MDB_TEST(repeated_crash_reboot_cycles_mixed_workload) {
         memset(key, 0, sizeof(key));
         key[0] = 'k';
         key[1] = (char)('0' + (char)(i % 10u));
-        ASSERT_EQ(microdb_kv_set(&g_db, key, &kv, 1u, 0u), MICRODB_OK);
-        ASSERT_EQ(microdb_ts_insert(&g_db, "mix", i + 1u, &tsv), MICRODB_OK);
-        ASSERT_EQ(microdb_row_set(table, row, "id", &id), MICRODB_OK);
-        ASSERT_EQ(microdb_row_set(table, row, "age", &age), MICRODB_OK);
-        ASSERT_EQ(microdb_rel_insert(&g_db, table, row), MICRODB_OK);
+        ASSERT_EQ(lox_kv_set(&g_db, key, &kv, 1u, 0u), LOX_OK);
+        ASSERT_EQ(lox_ts_insert(&g_db, "mix", i + 1u, &tsv), LOX_OK);
+        ASSERT_EQ(lox_row_set(table, row, "id", &id), LOX_OK);
+        ASSERT_EQ(lox_row_set(table, row, "age", &age), LOX_OK);
+        ASSERT_EQ(lox_rel_insert(&g_db, table, row), LOX_OK);
         crash_reopen();
-        ASSERT_EQ(microdb_table_get(&g_db, "users", &table), MICRODB_OK);
+        ASSERT_EQ(lox_table_get(&g_db, "users", &table), LOX_OK);
     }
     {
-        microdb_stats_t st;
-        ASSERT_EQ(microdb_inspect(&g_db, &st), MICRODB_OK);
+        lox_stats_t st;
+        ASSERT_EQ(lox_inspect(&g_db, &st), LOX_OK);
         ASSERT_GT(st.ts_samples_total, 0u);
         ASSERT_GT(st.rel_rows_total, 0u);
     }

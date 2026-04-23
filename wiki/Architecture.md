@@ -1,6 +1,6 @@
 # Architecture
 
-microdb exposes one API surface across three engines:
+loxdb exposes one API surface across three engines:
 
 - KV engine
 - Time-series engine
@@ -8,21 +8,21 @@ microdb exposes one API surface across three engines:
 
 ## Memory model
 
-microdb allocates exactly once during `microdb_init()`.
+loxdb allocates exactly once during `lox_init()`.
 That heap block is partitioned into fixed slices for KV, TS, and REL.
 There is no runtime allocator churn after initialization.
 
 Default split is controlled by:
 
-- `MICRODB_RAM_KV_PCT`
-- `MICRODB_RAM_TS_PCT`
-- `MICRODB_RAM_REL_PCT`
+- `LOX_RAM_KV_PCT`
+- `LOX_RAM_TS_PCT`
+- `LOX_RAM_REL_PCT`
 
-Runtime overrides are available in `microdb_cfg_t`.
+Runtime overrides are available in `lox_cfg_t`.
 
 ## Persistence model
 
-microdb can run:
+loxdb can run:
 
 - in RAM-only mode
 - with a POSIX file-backed storage HAL

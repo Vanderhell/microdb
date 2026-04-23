@@ -7,14 +7,14 @@ For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
 
 ### Highlights
 
-- Added free-tier runtime integrity API `microdb_selfcheck()` with anomaly counters and first-anomaly string.
+- Added free-tier runtime integrity API `lox_selfcheck()` with anomaly counters and first-anomaly string.
 - Added WCET deliverables for integrators:
-  - `include/microdb_wcet.h` bounds,
+  - `include/lox_wcet.h` bounds,
   - `docs/WCET_ANALYSIS.md` formulas and measurement guide,
   - `tests/test_wcet_bounds.c` coverage.
 - Added TS logarithmic retention feature set:
-  - `MICRODB_TS_POLICY_LOG_RETAIN`,
-  - `microdb_ts_register_ex(...)`,
+  - `LOX_TS_POLICY_LOG_RETAIN`,
+  - `lox_ts_register_ex(...)`,
   - per-stream zone configuration and validation tests.
 
 ### Validation
@@ -30,9 +30,9 @@ For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
 ### Highlights
 
 - REL mutation semantics are now consistent and explicit:
-  - `microdb_rel_find` and `microdb_rel_iter` both return `MICRODB_ERR_MODIFIED` on concurrent mutation after callback re-lock.
+  - `lox_rel_find` and `lox_rel_iter` both return `LOX_ERR_MODIFIED` on concurrent mutation after callback re-lock.
   - regression coverage added in `tests/test_rel.c`.
-- REL schema sealing now fails fast for oversized rows (`MICRODB_ERR_OVERFLOW`) instead of deferring failure to read paths.
+- REL schema sealing now fails fast for oversized rows (`LOX_ERR_OVERFLOW`) instead of deferring failure to read paths.
 - Release/CI robustness improved for current platform matrix:
   - release publish depends on sanitizer gate and build completion.
   - macOS artifact lane labeling aligned (`macos-arm64`).
@@ -46,8 +46,8 @@ For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
 
 ### Documentation
 
-- Added KV iteration weak-consistency contract in `include/microdb.h`.
-- Added known TS lifecycle limitation note (`no microdb_ts_unregister`) and thread-safety notes for `microdb_rel_find_by` lock-held copy behavior.
+- Added KV iteration weak-consistency contract in `include/lox.h`.
+- Added known TS lifecycle limitation note (`no lox_ts_unregister`) and thread-safety notes for `lox_rel_find_by` lock-held copy behavior.
 
 ## v1.3.0 - 2026-04-21
 
@@ -62,7 +62,7 @@ For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
 - KV JSON import/export TTL sentinel bug:
   - non-expiring keys now export/import as `ttl=0` (no immediate post-import expiry).
 - KV admission compact-budget computation is now O(1):
-  - `microdb_admit_kv_set` uses `core->kv.live_value_bytes` instead of O(n) bucket scan.
+  - `lox_admit_kv_set` uses `core->kv.live_value_bytes` instead of O(n) bucket scan.
   - verified on ESP32-S3 hardware (`admit_kv_set` observed from ~498us to ~190us in `run_real` flow).
 
 ### Performance / Validation
@@ -75,7 +75,7 @@ For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
 
 ### Repository Hygiene
 
-- Removed tracked ESP32 build artifacts under `bench/microdb_esp32_s3_bench/build_sync_flush_only/` and added ignore rule.
+- Removed tracked ESP32 build artifacts under `bench/lox_esp32_s3_bench/build_sync_flush_only/` and added ignore rule.
 
 ## v1.2.0 - 2026-04-20
 

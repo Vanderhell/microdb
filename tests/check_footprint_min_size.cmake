@@ -121,9 +121,9 @@ endif()
 string(TOLOWER "${MAP_CONTENT}" MAP_CONTENT_LOWER)
 
 set(FORBIDDEN_PATTERNS
-  "microdb_ts(\\.c)?\\.(obj|o)"
-  "microdb_rel(\\.c)?\\.(obj|o)"
-  "microdb_verify(\\.c)?\\.(obj|o)"
+  "lox_ts(\\.c)?\\.(obj|o)"
+  "lox_rel(\\.c)?\\.(obj|o)"
+  "lox_verify(\\.c)?\\.(obj|o)"
   "soak_runner(\\.c)?\\.(obj|o)"
   "worstcase_matrix_runner(\\.c)?\\.(obj|o)"
 )
@@ -134,10 +134,10 @@ foreach(PAT IN LISTS FORBIDDEN_PATTERNS)
 endforeach()
 
 set(REQUIRED_PATTERNS
-  "microdb(\\.c)?\\.(obj|o)"
-  "microdb_kv(\\.c)?\\.(obj|o)"
-  "microdb_wal(\\.c)?\\.(obj|o)"
-  "microdb_crc(\\.c)?\\.(obj|o)"
+  "loxdb(\\.c)?\\.(obj|o)"
+  "lox_kv(\\.c)?\\.(obj|o)"
+  "lox_wal(\\.c)?\\.(obj|o)"
+  "lox_crc(\\.c)?\\.(obj|o)"
 )
 foreach(PAT IN LISTS REQUIRED_PATTERNS)
   if(NOT MAP_CONTENT_LOWER MATCHES "${PAT}")

@@ -38,7 +38,7 @@ jobs:
       - name: Verifier integration smoke
         if: matrix.os == 'ubuntu-latest'
         run: |
-          cmake --build --preset ${{ matrix.preset }} --target microdb_verify
+          cmake --build --preset ${{ matrix.preset }} --target lox_verify
           ctest --preset ${{ matrix.preset }} -R test_offline_verifier -V
 
   sanitize-linux:

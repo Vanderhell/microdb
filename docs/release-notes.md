@@ -2,7 +2,7 @@
 
 ## Title
 
-`microdb v1.3.7`
+`loxdb v1.3.7`
 
 ## Release text (GitHub Release body)
 
@@ -11,14 +11,14 @@ documentation/bounds, and logarithmic time-series retention.
 
 Highlights:
 
-- Added `microdb_selfcheck()` to validate internal KV/TS/REL/WAL invariants at runtime.
+- Added `lox_selfcheck()` to validate internal KV/TS/REL/WAL invariants at runtime.
 - Added WCET package:
-  - `include/microdb_wcet.h`
+  - `include/lox_wcet.h`
   - `docs/WCET_ANALYSIS.md`
   - `tests/test_wcet_bounds.c`
 - Added TS logarithmic retention path:
-  - `MICRODB_TS_POLICY_LOG_RETAIN`
-  - `microdb_ts_register_ex(...)`
+  - `LOX_TS_POLICY_LOG_RETAIN`
+  - `lox_ts_register_ex(...)`
   - per-stream log-retain zone configuration.
 - Added dedicated test coverage:
   - `tests/test_selfcheck.c`

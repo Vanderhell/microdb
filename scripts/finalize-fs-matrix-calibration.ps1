@@ -93,10 +93,10 @@ $targets = @("ci-debug-linux", "ci-debug-windows", "release-linux", "release-win
 $violations = @()
 $changeRows = @()
 foreach ($name in $targets) {
-    $oldSmoke = Get-Budget -Presets $basePresets -PresetName $name -VarName "MICRODB_FS_MATRIX_SMOKE_MAX_MS"
-    $oldLong = Get-Budget -Presets $basePresets -PresetName $name -VarName "MICRODB_FS_MATRIX_LONG_MAX_MS"
-    $newSmoke = Get-Budget -Presets $candPresets -PresetName $name -VarName "MICRODB_FS_MATRIX_SMOKE_MAX_MS"
-    $newLong = Get-Budget -Presets $candPresets -PresetName $name -VarName "MICRODB_FS_MATRIX_LONG_MAX_MS"
+    $oldSmoke = Get-Budget -Presets $basePresets -PresetName $name -VarName "LOX_FS_MATRIX_SMOKE_MAX_MS"
+    $oldLong = Get-Budget -Presets $basePresets -PresetName $name -VarName "LOX_FS_MATRIX_LONG_MAX_MS"
+    $newSmoke = Get-Budget -Presets $candPresets -PresetName $name -VarName "LOX_FS_MATRIX_SMOKE_MAX_MS"
+    $newLong = Get-Budget -Presets $candPresets -PresetName $name -VarName "LOX_FS_MATRIX_LONG_MAX_MS"
     if ($null -eq $oldSmoke -or $null -eq $oldLong -or $null -eq $newSmoke -or $null -eq $newLong) {
         continue
     }

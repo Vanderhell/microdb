@@ -4,7 +4,7 @@ This contract defines the smallest supported durable profile with hard, CI-enfor
 
 ## Profile
 
-- compile-time profile: `MICRODB_PROFILE_FOOTPRINT_MIN=1`
+- compile-time profile: `LOX_PROFILE_FOOTPRINT_MIN=1`
 - intended behavior:
   - KV enabled
   - TS disabled
@@ -29,8 +29,8 @@ Not guaranteed in `FOOTPRINT_MIN`:
 Important separation:
 
 - `FOOTPRINT_MIN` is the smallest **durable** supported profile.
-- `microdb_tiny` (KV-only, WAL-off) is a separate smallest-size variant and has weaker power-fail durability semantics than WAL profiles.
-- `microdb_tiny` must not be communicated as equivalent durability to WAL-enabled profiles.
+- `lox_tiny` (KV-only, WAL-off) is a separate smallest-size variant and has weaker power-fail durability semantics than WAL profiles.
+- `lox_tiny` must not be communicated as equivalent durability to WAL-enabled profiles.
 
 ## Canonical baseline
 
@@ -61,15 +61,15 @@ Sections are parsed from the linker map (`test_footprint_min_baseline.map`).
 
 Both size-gate tests also fail if the canonical baseline links forbidden objects:
 
-- `microdb_ts.obj`
-- `microdb_rel.obj`
-- `microdb_verify.obj`
+- `lox_ts.obj`
+- `lox_rel.obj`
+- `lox_verify.obj`
 - `soak_runner.obj`
 - `worstcase_matrix_runner.obj`
 
 Required objects for the minimal supported profile:
 
-- `microdb.obj`
-- `microdb_kv.obj`
-- `microdb_wal.obj`
-- `microdb_crc.obj`
+- `loxdb.obj`
+- `lox_kv.obj`
+- `lox_wal.obj`
+- `lox_crc.obj`

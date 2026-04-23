@@ -83,30 +83,30 @@ jobs:
         run: ctest --preset ${{ matrix.test_preset }}
 
       - name: Install
-        run: cmake --install ${{ matrix.build_dir }} --config Release --prefix stage/microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}
+        run: cmake --install ${{ matrix.build_dir }} --config Release --prefix stage/loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}
 
       - name: Package archive (Linux)
         if: runner.os == 'Linux'
         working-directory: stage
-        run: tar -czf microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }} microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}
+        run: tar -czf loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }} loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}
 
       - name: Package archive (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         working-directory: stage
-        run: Compress-Archive -Path microdb-${{ steps.version.outputs.value }}-${{ matrix.label }} -DestinationPath microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}
+        run: Compress-Archive -Path loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }} -DestinationPath loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}
 
       - name: Generate checksum (Linux)
         if: runner.os == 'Linux'
         working-directory: stage
-        run: sha256sum microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }} > microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}.sha256
+        run: sha256sum loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }} > loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}.sha256
 
       - name: Generate checksum (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         working-directory: stage
         run: |
-          $name = "microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}"
+          $name = "loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}"
           $hash = (Get-FileHash $name -Algorithm SHA256).Hash.ToLower()
           "$hash  $name" | Out-File -FilePath "$name.sha256" -Encoding ascii
 
@@ -115,8 +115,8 @@ jobs:
         with:
           name: release-${{ matrix.label }}
           path: |
-            stage/microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}
-            stage/microdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}.sha256
+            stage/loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}
+            stage/loxdb-${{ steps.version.outputs.value }}-${{ matrix.label }}.${{ matrix.archive_ext }}.sha256
 
   publish-release:
     name: Publish GitHub Release

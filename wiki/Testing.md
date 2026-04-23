@@ -1,11 +1,11 @@
 # Testing
 
-microdb uses CMake and CTest.
+loxdb uses CMake and CTest.
 
 ## Local workflow
 
 ```sh
-cmake -S . -B build -DMICRODB_BUILD_TESTS=ON
+cmake -S . -B build -DLOX_BUILD_TESTS=ON
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```

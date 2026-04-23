@@ -1,4 +1,4 @@
 name=overflow_table_name_len
 mutation=overflow_table_name_len
-expect=MICRODB_OK_OR_CORRUPT
+expect=LOX_OK_OR_CORRUPT
 description=Set first REL payload table-name length byte to invalid value.

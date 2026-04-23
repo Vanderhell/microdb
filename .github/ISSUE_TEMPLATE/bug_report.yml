@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible bug in microdb
+description: Report a reproducible bug in loxdb
 title: "[Bug]: "
 labels: ["bug"]
 body:

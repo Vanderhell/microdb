@@ -96,14 +96,14 @@ jobs:
 
           $managedPath = "managed_stress_baseline_${{ matrix.label }}.json"
           $managed = Get-Content $managedPath -Raw | ConvertFrom-Json
-          $managed.smoke_budget_ms = [double]$preset.cacheVariables.MICRODB_MANAGED_STRESS_SMOKE_MAX_MS
-          $managed.long_budget_ms = [double]$preset.cacheVariables.MICRODB_MANAGED_STRESS_LONG_MAX_MS
+          $managed.smoke_budget_ms = [double]$preset.cacheVariables.LOX_MANAGED_STRESS_SMOKE_MAX_MS
+          $managed.long_budget_ms = [double]$preset.cacheVariables.LOX_MANAGED_STRESS_LONG_MAX_MS
           Set-Content -Path $managedPath -Value ($managed | ConvertTo-Json -Depth 8) -Encoding ascii
 
           $fsPath = "fs_matrix_baseline_${{ matrix.label }}.json"
           $fs = Get-Content $fsPath -Raw | ConvertFrom-Json
-          $fs.smoke_budget_ms = [double]$preset.cacheVariables.MICRODB_FS_MATRIX_SMOKE_MAX_MS
-          $fs.long_budget_ms = [double]$preset.cacheVariables.MICRODB_FS_MATRIX_LONG_MAX_MS
+          $fs.smoke_budget_ms = [double]$preset.cacheVariables.LOX_FS_MATRIX_SMOKE_MAX_MS
+          $fs.long_budget_ms = [double]$preset.cacheVariables.LOX_FS_MATRIX_LONG_MAX_MS
           Set-Content -Path $fsPath -Value ($fs | ConvertTo-Json -Depth 8) -Encoding ascii
 
       - name: Upload rollup snapshots

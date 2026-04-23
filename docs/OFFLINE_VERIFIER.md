@@ -1,6 +1,6 @@
-# Offline Verifier (`microdb_verify`)
+# Offline Verifier (`lox_verify`)
 
-`microdb_verify` is a read-only verifier for a persisted microdb storage image.
+`lox_verify` is a read-only verifier for a persisted loxdb storage image.
 
 ## What it checks
 
@@ -107,9 +107,9 @@ On failure, stderr uses a stable format:
 ## Usage
 
 ```bash
-microdb_verify --image db.bin --json
-microdb_verify --image db.bin --ram-kb 32 --kv-pct 40 --ts-pct 40 --rel-pct 20 --erase-size 4096 --json
-microdb_verify --image db.bin --check
+lox_verify --image db.bin --json
+lox_verify --image db.bin --ram-kb 32 --kv-pct 40 --ts-pct 40 --rel-pct 20 --erase-size 4096 --json
+lox_verify --image db.bin --check
 ```
 
 ## Notes

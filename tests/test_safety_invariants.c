@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 #include "microtest.h"
-#include "microdb.h"
-#include "../port/posix/microdb_port_posix.h"
+#include "lox.h"
+#include "../port/posix/lox_port_posix.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-static microdb_t g_db;
-static microdb_storage_t g_storage;
+static lox_t g_db;
+static lox_storage_t g_storage;
 static char g_path[128];
 static unsigned g_seq = 0u;
 
@@ -27,7 +27,7 @@ static bool kv_iter_noop(const char *key, const void *val, size_t len, uint32_t 
     return true;
 }
 
-static bool ts_query_noop(const microdb_ts_sample_t *sample, void *ctx) {
+static bool ts_query_noop(const lox_ts_sample_t *sample, void *ctx) {
     (void)sample;
     (void)ctx;
     return true;
@@ -39,52 +39,52 @@ static void make_path(const char *tag) {
 }
 
 static void open_db_with_storage(const char *tag) {
-    microdb_cfg_t cfg;
+    lox_cfg_t cfg;
     make_path(tag);
-    microdb_port_posix_remove(g_path);
+    lox_port_posix_remove(g_path);
     memset(&g_db, 0, sizeof(g_db));
     memset(&g_storage, 0, sizeof(g_storage));
     memset(&cfg, 0, sizeof(cfg));
-    ASSERT_EQ(microdb_port_posix_init(&g_storage, g_path, 131072u), MICRODB_OK);
+    ASSERT_EQ(lox_port_posix_init(&g_storage, g_path, 131072u), LOX_OK);
     cfg.storage = &g_storage;
     cfg.ram_kb = 32u;
     cfg.wal_compact_auto = 1u;
     cfg.wal_compact_threshold_pct = 75u;
-    ASSERT_EQ(microdb_init(&g_db, &cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &cfg), LOX_OK);
 }
 
 static void reopen_db_with_storage(void) {
-    microdb_cfg_t cfg;
-    microdb_port_posix_deinit(&g_storage);
+    lox_cfg_t cfg;
+    lox_port_posix_deinit(&g_storage);
     memset(&g_storage, 0, sizeof(g_storage));
     memset(&g_db, 0, sizeof(g_db));
     memset(&cfg, 0, sizeof(cfg));
-    ASSERT_EQ(microdb_port_posix_init(&g_storage, g_path, 131072u), MICRODB_OK);
+    ASSERT_EQ(lox_port_posix_init(&g_storage, g_path, 131072u), LOX_OK);
     cfg.storage = &g_storage;
     cfg.ram_kb = 32u;
     cfg.wal_compact_auto = 1u;
     cfg.wal_compact_threshold_pct = 75u;
-    ASSERT_EQ(microdb_init(&g_db, &cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &cfg), LOX_OK);
 }
 
 static void close_db_with_storage(void) {
-    (void)microdb_deinit(&g_db);
-    (void)microdb_port_posix_deinit(&g_storage);
-    microdb_port_posix_remove(g_path);
+    (void)lox_deinit(&g_db);
+    (void)lox_port_posix_deinit(&g_storage);
+    lox_port_posix_remove(g_path);
     memset(&g_db, 0, sizeof(g_db));
     memset(&g_storage, 0, sizeof(g_storage));
 }
 
 static void open_db_ram_only(void) {
-    microdb_cfg_t cfg;
+    lox_cfg_t cfg;
     memset(&g_db, 0, sizeof(g_db));
     memset(&cfg, 0, sizeof(cfg));
     cfg.ram_kb = 32u;
-    ASSERT_EQ(microdb_init(&g_db, &cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &cfg), LOX_OK);
 }
 
 static void close_db_ram_only(void) {
-    (void)microdb_deinit(&g_db);
+    (void)lox_deinit(&g_db);
     memset(&g_db, 0, sizeof(g_db));
 }
 
@@ -102,7 +102,7 @@ static void teardown_noop(void) {
 MDB_TEST(invariant_magic_cleared_before_heap_free) {
     uint32_t magic = 0u;
     open_db_ram_only();
-    ASSERT_EQ(microdb_deinit(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_deinit(&g_db), LOX_OK);
     memcpy(&magic, &g_db._opaque[0], sizeof(magic));
     ASSERT_EQ(magic != 0x4D444230u, 1);
 }
@@ -118,10 +118,10 @@ MDB_TEST(invariant_wal_replay_stops_at_corrupt_entry) {
     FILE *fp;
 
     open_db_with_storage("walstop");
-    ASSERT_EQ(microdb_kv_set(&g_db, "snap", &one, 1u, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
-    ASSERT_EQ(microdb_kv_set(&g_db, "tail", &two, 1u, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_deinit(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_kv_set(&g_db, "snap", &one, 1u, 0u), LOX_OK);
+    ASSERT_EQ(lox_flush(&g_db), LOX_OK);
+    ASSERT_EQ(lox_kv_set(&g_db, "tail", &two, 1u, 0u), LOX_OK);
+    ASSERT_EQ(lox_deinit(&g_db), LOX_OK);
 
     fp = fopen(g_path, "r+b");
     ASSERT_EQ(fp != NULL, 1);
@@ -149,7 +149,7 @@ MDB_TEST(invariant_wal_replay_stops_at_corrupt_entry) {
     ASSERT_EQ(fclose(fp), 0);
 
     reopen_db_with_storage();
-    ASSERT_EQ(microdb_kv_get(&g_db, "snap", &out, 1u, NULL), MICRODB_OK);
+    ASSERT_EQ(lox_kv_get(&g_db, "snap", &out, 1u, NULL), LOX_OK);
     ASSERT_EQ(out, one);
 }
 
@@ -157,65 +157,65 @@ MDB_TEST(invariant_txn_without_commit_not_visible_after_reopen) {
     uint8_t v = 7u;
     uint8_t out = 0u;
     open_db_with_storage("txn");
-    ASSERT_EQ(microdb_txn_begin(&g_db), MICRODB_OK);
-    ASSERT_EQ(microdb_kv_set(&g_db, "txn_test", &v, 1u, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_txn_rollback(&g_db), MICRODB_OK);
-    ASSERT_EQ(microdb_deinit(&g_db), MICRODB_OK);
+    ASSERT_EQ(lox_txn_begin(&g_db), LOX_OK);
+    ASSERT_EQ(lox_kv_set(&g_db, "txn_test", &v, 1u, 0u), LOX_OK);
+    ASSERT_EQ(lox_txn_rollback(&g_db), LOX_OK);
+    ASSERT_EQ(lox_deinit(&g_db), LOX_OK);
     reopen_db_with_storage();
-    ASSERT_EQ(microdb_kv_get(&g_db, "txn_test", &out, 1u, NULL), MICRODB_ERR_NOT_FOUND);
+    ASSERT_EQ(lox_kv_get(&g_db, "txn_test", &out, 1u, NULL), LOX_ERR_NOT_FOUND);
 }
 
 MDB_TEST(invariant_superblock_switches_on_compact) {
-    microdb_db_stats_t before;
-    microdb_db_stats_t after;
+    lox_db_stats_t before;
+    lox_db_stats_t after;
     uint8_t v = 9u;
     open_db_with_storage("super");
-    ASSERT_EQ(microdb_get_db_stats(&g_db, &before), MICRODB_OK);
-    ASSERT_EQ(microdb_kv_set(&g_db, "k", &v, 1u, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_compact(&g_db), MICRODB_OK);
-    ASSERT_EQ(microdb_get_db_stats(&g_db, &after), MICRODB_OK);
+    ASSERT_EQ(lox_get_db_stats(&g_db, &before), LOX_OK);
+    ASSERT_EQ(lox_kv_set(&g_db, "k", &v, 1u, 0u), LOX_OK);
+    ASSERT_EQ(lox_compact(&g_db), LOX_OK);
+    ASSERT_EQ(lox_get_db_stats(&g_db, &after), LOX_OK);
     ASSERT_EQ(after.active_bank != before.active_bank, 1);
     ASSERT_EQ(after.active_generation > before.active_generation, 1);
 }
 
 MDB_TEST(invariant_double_deinit_returns_invalid) {
     open_db_ram_only();
-    ASSERT_EQ(microdb_deinit(&g_db), MICRODB_OK);
-    ASSERT_EQ(microdb_deinit(&g_db), MICRODB_ERR_INVALID);
+    ASSERT_EQ(lox_deinit(&g_db), LOX_OK);
+    ASSERT_EQ(lox_deinit(&g_db), LOX_ERR_INVALID);
 }
 
 MDB_TEST(invariant_all_apis_reject_null_handle) {
-    microdb_stats_t stats;
+    lox_stats_t stats;
     uint8_t b = 0u;
-    microdb_ts_sample_t ts;
+    lox_ts_sample_t ts;
     uint32_t deleted = 0u;
     uint32_t rel_count = 0u;
     size_t out_len = 0u;
 
-    ASSERT_EQ(microdb_flush(NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_deinit(NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_stats(NULL, &stats), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_kv_set(NULL, "k", &b, 1u, 0u), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_kv_get(NULL, "k", &b, 1u, &out_len), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_kv_del(NULL, "k"), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_kv_exists(NULL, "k"), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_kv_iter(NULL, kv_iter_noop, NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_kv_clear(NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_txn_begin(NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_txn_commit(NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_txn_rollback(NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_ts_register(NULL, "s", MICRODB_TS_U32, 0u), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_ts_insert(NULL, "s", 1u, &b), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_ts_last(NULL, "s", &ts), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_ts_query(NULL, "s", 0u, 1u, ts_query_noop, NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_ts_clear(NULL, "s"), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_rel_insert(NULL, NULL, &b), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_rel_find(NULL, NULL, &b, rel_iter_noop, NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_rel_delete(NULL, NULL, &b, &deleted), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_rel_iter(NULL, NULL, rel_iter_noop, NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_rel_clear(NULL, NULL), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_rel_count(NULL, &rel_count), MICRODB_ERR_INVALID);
-    ASSERT_EQ(microdb_compact(NULL), MICRODB_ERR_INVALID);
+    ASSERT_EQ(lox_flush(NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_deinit(NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_stats(NULL, &stats), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_kv_set(NULL, "k", &b, 1u, 0u), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_kv_get(NULL, "k", &b, 1u, &out_len), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_kv_del(NULL, "k"), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_kv_exists(NULL, "k"), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_kv_iter(NULL, kv_iter_noop, NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_kv_clear(NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_txn_begin(NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_txn_commit(NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_txn_rollback(NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_ts_register(NULL, "s", LOX_TS_U32, 0u), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_ts_insert(NULL, "s", 1u, &b), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_ts_last(NULL, "s", &ts), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_ts_query(NULL, "s", 0u, 1u, ts_query_noop, NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_ts_clear(NULL, "s"), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_rel_insert(NULL, NULL, &b), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_rel_find(NULL, NULL, &b, rel_iter_noop, NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_rel_delete(NULL, NULL, &b, &deleted), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_rel_iter(NULL, NULL, rel_iter_noop, NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_rel_clear(NULL, NULL), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_rel_count(NULL, &rel_count), LOX_ERR_INVALID);
+    ASSERT_EQ(lox_compact(NULL), LOX_ERR_INVALID);
 }
 
 int main(void) {

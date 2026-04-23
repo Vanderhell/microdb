@@ -1,10 +1,10 @@
 # Backend Integration Guide
 
-This guide is the practical entry point for integrating `microdb` storage backends.
+This guide is the practical entry point for integrating `loxdb` storage backends.
 
 It explains:
 
-- how to connect a raw `microdb_storage_t` directly to `microdb_init`
+- how to connect a raw `lox_storage_t` directly to `lox_init`
 - how to use optional backend-open orchestration (`descriptor -> decision -> adapter`)
 - what backend stubs are (and are not)
 - where to start when writing a real platform port
@@ -12,7 +12,7 @@ It explains:
 For real port authoring, see:
 
 - `docs/PORT_AUTHORING_GUIDE.md`
-- `port/esp32/microdb_port_esp32.c` (live reference implementation)
+- `port/esp32/lox_port_esp32.c` (live reference implementation)
 
 ## 1) Two integration modes
 
@@ -26,9 +26,9 @@ Use this when your storage already satisfies core contract requirements:
 
 Flow:
 
-1. Prepare `microdb_storage_t` from your platform driver.
-2. Put it into `microdb_cfg_t.storage`.
-3. Call `microdb_init`.
+1. Prepare `lox_storage_t` from your platform driver.
+2. Put it into `lox_cfg_t.storage`.
+3. Call `lox_init`.
 
 ### B) Backend-open mode (policy path)
 
@@ -36,47 +36,47 @@ Use this when you support multiple storage classes, or when media may need adapt
 
 Flow:
 
-1. Reset session (`microdb_backend_open_session_reset`).
-2. Call `microdb_backend_open_prepare(...)`.
-3. Use returned `out_storage` in `microdb_cfg_t.storage`.
-4. Call `microdb_init`.
-5. On shutdown, call `microdb_backend_open_release(...)`.
+1. Reset session (`lox_backend_open_session_reset`).
+2. Call `lox_backend_open_prepare(...)`.
+3. Use returned `out_storage` in `lox_cfg_t.storage`.
+4. Call `lox_init`.
+5. On shutdown, call `lox_backend_open_release(...)`.
 
 ## 2) Reference backend-open integration
 
 ```c
-#include "microdb.h"
-#include "microdb_backend_open.h"
+#include "lox.h"
+#include "lox_backend_open.h"
 
-microdb_t db;
-microdb_cfg_t cfg = {0};
-microdb_backend_open_session_t session;
-microdb_storage_t raw_storage;       /* filled by your platform */
-microdb_storage_t *opened = NULL;
+lox_t db;
+lox_cfg_t cfg = {0};
+lox_backend_open_session_t session;
+lox_storage_t raw_storage;       /* filled by your platform */
+lox_storage_t *opened = NULL;
 
-microdb_backend_open_session_reset(&session);
+lox_backend_open_session_reset(&session);
 
-if (microdb_backend_open_prepare("my_backend",
+if (lox_backend_open_prepare("my_backend",
                                  &raw_storage,
                                  1u,   /* has_aligned_adapter */
                                  1u,   /* has_managed_adapter */
                                  &session,
-                                 &opened) != MICRODB_OK) {
+                                 &opened) != LOX_OK) {
     /* handle open-classification/adapter failure */
 }
 
 cfg.storage = opened;
 cfg.ram_kb = 32u;
 
-if (microdb_init(&db, &cfg) != MICRODB_OK) {
-    microdb_backend_open_release(&session);
+if (lox_init(&db, &cfg) != LOX_OK) {
+    lox_backend_open_release(&session);
     /* handle init failure */
 }
 
 /* ... use db ... */
 
-microdb_deinit(&db);
-microdb_backend_open_release(&session);
+lox_deinit(&db);
+lox_backend_open_release(&session);
 ```
 
 ## 3) Important: backend stubs are not media drivers
@@ -90,7 +90,7 @@ They do **not** provide:
 - bad block management
 - wear leveling
 
-For production media integration, you still must provide real driver glue in `microdb_storage_t` hooks.
+For production media integration, you still must provide real driver glue in `lox_storage_t` hooks.
 
 Practical interpretation by medium:
 
@@ -98,8 +98,8 @@ Practical interpretation by medium:
   - supported when you already have a real stack (for example FatFS/LittleFS + SDMMC/SPI block I/O, or vendor managed block API).
   - unsupported as "plug-and-play" from stubs alone.
 - Raw NAND:
-  - not a direct microdb storage target.
-  - requires a managed layer that provides ECC, bad-block handling, and wear leveling before mapping to `microdb_storage_t`.
+  - not a direct loxdb storage target.
+  - requires a managed layer that provides ECC, bad-block handling, and wear leveling before mapping to `lox_storage_t`.
 
 Reference glue example:
 
@@ -119,9 +119,9 @@ Detailed contract:
 
 ## 5) Common pitfalls
 
-- Calling `microdb_init` directly with unsupported geometry (`write_size != 1`) without adapter path.
+- Calling `lox_init` directly with unsupported geometry (`write_size != 1`) without adapter path.
 - Assuming stubs are plug-and-play drivers.
-- Forgetting `microdb_backend_open_release` after backend-open session use.
+- Forgetting `lox_backend_open_release` after backend-open session use.
 - Mixing adapter policy assumptions without explicit expectations/checks.
 
 ## 6) Bring-up checklist

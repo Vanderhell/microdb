@@ -2,7 +2,7 @@
 
 Source checklist:
 
-- `bench/microdb_esp32_s3_bench/MEGA_BENCH_TEST_PLAN.md`
+- `bench/lox_esp32_s3_bench/MEGA_BENCH_TEST_PLAN.md`
 
 This file is a reality check against tests currently present in `tests/` and CTest wiring in `CMakeLists.txt`.
 

@@ -3,7 +3,7 @@
 ## Tag message template
 
 ```text
-microdb <version>
+loxdb <version>
 
 Embedded C99 database core for MCU/edge systems.
 
@@ -16,9 +16,9 @@ This release includes:
 ## Short announcement template
 
 ```text
-Released microdb <version>.
+Released loxdb <version>.
 
-microdb provides KV, TS, and REL APIs for embedded systems with optional WAL-backed durability.
+loxdb provides KV, TS, and REL APIs for embedded systems with optional WAL-backed durability.
 
 Start here:
 - README.md

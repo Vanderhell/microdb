@@ -4,7 +4,7 @@ This document is the contract-level summary of what the current codebase guarant
 
 ## Scope
 
-- Source of truth: `include/microdb.h`, `CMakeLists.txt`, and test coverage in `tests/`.
+- Source of truth: `include/lox.h`, `CMakeLists.txt`, and test coverage in `tests/`.
 - This document intentionally avoids historical benchmark numbers.
 - Runtime metrics in `docs/results/` are snapshots, not API contract.
 
@@ -12,38 +12,38 @@ This document is the contract-level summary of what the current codebase guarant
 
 Exactly one profile macro can be enabled:
 
-- `MICRODB_PROFILE_CORE_MIN`
-- `MICRODB_PROFILE_CORE_WAL`
-- `MICRODB_PROFILE_CORE_PERF`
-- `MICRODB_PROFILE_CORE_HIMEM`
-- `MICRODB_PROFILE_FOOTPRINT_MIN`
+- `LOX_PROFILE_CORE_MIN`
+- `LOX_PROFILE_CORE_WAL`
+- `LOX_PROFILE_CORE_PERF`
+- `LOX_PROFILE_CORE_HIMEM`
+- `LOX_PROFILE_FOOTPRINT_MIN`
 
-If none is set, `MICRODB_PROFILE_CORE_WAL` is selected by default.
+If none is set, `LOX_PROFILE_CORE_WAL` is selected by default.
 
 ## Durable storage contract (current releases)
 
-Validated at `microdb_init()` / open path:
+Validated at `lox_init()` / open path:
 
 - `erase_size > 0`
 - `write_size == 1`
 
-If violated, initialization fails with `MICRODB_ERR_INVALID`.
+If violated, initialization fails with `LOX_ERR_INVALID`.
 
 ## Engine guarantees by build/profile
 
-- KV: available when `MICRODB_ENABLE_KV=1`.
-- TS: available when `MICRODB_ENABLE_TS=1`.
-- REL: available when `MICRODB_ENABLE_REL=1`.
-- WAL durability path: available when `MICRODB_ENABLE_WAL=1` and storage HAL is provided.
+- KV: available when `LOX_ENABLE_KV=1`.
+- TS: available when `LOX_ENABLE_TS=1`.
+- REL: available when `LOX_ENABLE_REL=1`.
+- WAL durability path: available when `LOX_ENABLE_WAL=1` and storage HAL is provided.
 
-`MICRODB_PROFILE_FOOTPRINT_MIN` contract:
+`LOX_PROFILE_FOOTPRINT_MIN` contract:
 
 - KV enabled
 - TS disabled
 - REL disabled
 - WAL enabled
 
-`microdb_tiny` variant (CMake target) is not equivalent to footprint-min durability:
+`lox_tiny` variant (CMake target) is not equivalent to footprint-min durability:
 
 - TS disabled
 - REL disabled
@@ -51,10 +51,10 @@ If violated, initialization fails with `MICRODB_ERR_INVALID`.
 
 ## Error contract
 
-Stable public error enum is `microdb_err_t`.
+Stable public error enum is `lox_err_t`.
 String mapping helper:
 
-- `microdb_err_to_string(microdb_err_t)`
+- `lox_err_to_string(lox_err_t)`
 
 Detailed semantics:
 

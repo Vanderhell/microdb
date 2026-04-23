@@ -1,7 +1,7 @@
 # Hard Verdict Report (2026-04-19)
 
 ## Product Identity
-microdb is a deterministic durable storage core for MCU/embedded systems with power-fail-safe WAL recovery.
+loxdb is a deterministic durable storage core for MCU/embedded systems with power-fail-safe WAL recovery.
 
 ## Desktop (full matrix + soak)
 Source:

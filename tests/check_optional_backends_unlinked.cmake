@@ -24,11 +24,11 @@ if(NOT _rc EQUAL 0)
 endif()
 
 foreach(_sym
-        microdb_backend_nand_stub_marker
-        microdb_backend_emmc_stub_marker
-        microdb_backend_sd_stub_marker
-        microdb_backend_fs_stub_marker
-        microdb_backend_block_stub_marker)
+        lox_backend_nand_stub_marker
+        lox_backend_emmc_stub_marker
+        lox_backend_sd_stub_marker
+        lox_backend_fs_stub_marker
+        lox_backend_block_stub_marker)
     string(FIND "${_out}" "${_sym}" _pos)
     if(NOT _pos EQUAL -1)
         message(FATAL_ERROR "Optional backend symbol leaked into core library: ${_sym}")

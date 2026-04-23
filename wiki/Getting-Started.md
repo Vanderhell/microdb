@@ -1,26 +1,26 @@
 # Getting Started
 
-## Add microdb to a CMake project
+## Add loxdb to a CMake project
 
 ```cmake
-add_subdirectory(microdb)
-target_link_libraries(your_app PRIVATE microdb)
+add_subdirectory(loxdb)
+target_link_libraries(your_app PRIVATE loxdb)
 ```
 
 ## Minimal initialization
 
 ```c
-#define MICRODB_RAM_KB 32
-#include "microdb.h"
+#define LOX_RAM_KB 32
+#include "lox.h"
 
-static microdb_t db;
+static lox_t db;
 
-microdb_cfg_t cfg = {
+lox_cfg_t cfg = {
     .storage = NULL,
     .now = NULL,
 };
 
-microdb_init(&db, &cfg);
+lox_init(&db, &cfg);
 ```
 
 `cfg.storage = NULL` means RAM-only mode.
@@ -31,26 +31,26 @@ Provide a storage HAL when you want persistence and WAL recovery.
 ```c
 float temp = 23.5f;
 
-microdb_kv_put(&db, "temperature", &temp, sizeof(temp));
+lox_kv_put(&db, "temperature", &temp, sizeof(temp));
 
-microdb_ts_register(&db, "sensor", MICRODB_TS_F32, 0);
-microdb_ts_insert(&db, "sensor", time_now(), &temp);
+lox_ts_register(&db, "sensor", LOX_TS_F32, 0);
+lox_ts_insert(&db, "sensor", time_now(), &temp);
 ```
 
 For relational data:
 
 ```c
-microdb_schema_t schema;
-microdb_schema_init(&schema, "devices", 32);
-microdb_schema_add(&schema, "id", MICRODB_COL_U16, 2, true);
-microdb_schema_add(&schema, "name", MICRODB_COL_STR, 16, false);
-microdb_schema_seal(&schema);
-microdb_table_create(&db, &schema);
+lox_schema_t schema;
+lox_schema_init(&schema, "devices", 32);
+lox_schema_add(&schema, "id", LOX_COL_U16, 2, true);
+lox_schema_add(&schema, "name", LOX_COL_STR, 16, false);
+lox_schema_seal(&schema);
+lox_table_create(&db, &schema);
 ```
 
-## When to use microdb
+## When to use loxdb
 
-Use microdb when you want:
+Use loxdb when you want:
 
 - predictable memory usage
 - a fixed RAM budget

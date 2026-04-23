@@ -1,6 +1,6 @@
 # Storage HAL
 
-microdb supports three storage modes.
+loxdb supports three storage modes.
 
 ## RAM-only
 
@@ -11,8 +11,8 @@ This is the simplest mode and avoids persistence entirely.
 
 The repository includes a POSIX-backed port for tests and simulation:
 
-- `port/posix/microdb_port_posix.c`
-- `port/posix/microdb_port_posix.h`
+- `port/posix/lox_port_posix.c`
+- `port/posix/lox_port_posix.h`
 
 This is suitable for local testing and host-side integration runs.
 
@@ -20,8 +20,8 @@ This is suitable for local testing and host-side integration runs.
 
 The repository includes an ESP32 port:
 
-- `port/esp32/microdb_port_esp32.c`
-- `port/esp32/microdb_port_esp32.h`
+- `port/esp32/lox_port_esp32.c`
+- `port/esp32/lox_port_esp32.h`
 
 The CMake file also exposes an ESP-IDF component path when `IDF_TARGET` is defined.
 

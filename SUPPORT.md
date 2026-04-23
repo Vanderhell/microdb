@@ -20,7 +20,7 @@ Please include:
 
 - General C/C++ tutoring
 - Non-reproducible reports without diagnostics
-- Changes unrelated to `microdb` core contracts
+- Changes unrelated to `loxdb` core contracts
 
 ## Commercial / Priority Support
 

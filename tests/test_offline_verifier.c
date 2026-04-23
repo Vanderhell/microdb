@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "microtest.h"
-#include "microdb.h"
-#include "../port/posix/microdb_port_posix.h"
-#include "../src/microdb_crc.h"
+#include "lox.h"
+#include "../port/posix/lox_port_posix.h"
+#include "../src/lox_crc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,9 +15,9 @@
 #endif
 
 enum {
-    MICRODB_WAL_ENTRY_MAGIC = 0x454E5452u,
-    MICRODB_WAL_ENGINE_TXN_KV = 3u,
-    MICRODB_WAL_OP_SET_INSERT = 0u
+    LOX_WAL_ENTRY_MAGIC = 0x454E5452u,
+    LOX_WAL_ENGINE_TXN_KV = 3u,
+    LOX_WAL_OP_SET_INSERT = 0u
 };
 
 static char g_verify_tool[512];
@@ -112,10 +112,10 @@ static void strip_outer_quotes(char *s) {
 }
 
 static void set_verify_tool_path(const char *argv0) {
-#ifdef MICRODB_VERIFY_TOOL_PATH
+#ifdef LOX_VERIFY_TOOL_PATH
     (void)argv0;
     memset(g_verify_tool, 0, sizeof(g_verify_tool));
-    (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "%s", MICRODB_VERIFY_TOOL_PATH);
+    (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "%s", LOX_VERIFY_TOOL_PATH);
     strip_outer_quotes(g_verify_tool);
 #else
     const char *slash = NULL;
@@ -123,9 +123,9 @@ static void set_verify_tool_path(const char *argv0) {
     memset(g_verify_tool, 0, sizeof(g_verify_tool));
     if (argv0 == NULL || argv0[0] == '\0') {
 #ifdef _WIN32
-        (void)snprintf(g_verify_tool, sizeof(g_verify_tool), ".\\microdb_verify.exe");
+        (void)snprintf(g_verify_tool, sizeof(g_verify_tool), ".\\lox_verify.exe");
 #else
-        (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "./microdb_verify");
+        (void)snprintf(g_verify_tool, sizeof(g_verify_tool), "./lox_verify");
 #endif
         return;
     }
@@ -151,9 +151,9 @@ static void set_verify_tool_path(const char *argv0) {
         memcpy(g_verify_tool, argv0, dir_len);
     }
 #ifdef _WIN32
-    (void)snprintf(g_verify_tool + dir_len, sizeof(g_verify_tool) - dir_len, "\\microdb_verify.exe");
+    (void)snprintf(g_verify_tool + dir_len, sizeof(g_verify_tool) - dir_len, "\\lox_verify.exe");
 #else
-    (void)snprintf(g_verify_tool + dir_len, sizeof(g_verify_tool) - dir_len, "/microdb_verify");
+    (void)snprintf(g_verify_tool + dir_len, sizeof(g_verify_tool) - dir_len, "/lox_verify");
 #endif
     strip_outer_quotes(g_verify_tool);
 #endif
@@ -165,9 +165,9 @@ static void compute_layout_32kb(verifier_layout_t *out) {
     uint32_t kv_bytes = (total_bytes * 40u) / 100u;
     uint32_t ts_bytes = (total_bytes * 40u) / 100u;
     uint32_t rel_bytes = total_bytes - kv_bytes - ts_bytes;
-    uint32_t max_key_len = (MICRODB_KV_KEY_MAX_LEN > 0u) ? (MICRODB_KV_KEY_MAX_LEN - 1u) : 0u;
-    uint32_t per_entry = 1u + max_key_len + 4u + MICRODB_KV_VAL_MAX_LEN + 4u;
-    uint32_t max_entries = (MICRODB_KV_MAX_KEYS > MICRODB_TXN_STAGE_KEYS) ? (MICRODB_KV_MAX_KEYS - MICRODB_TXN_STAGE_KEYS) : 0u;
+    uint32_t max_key_len = (LOX_KV_KEY_MAX_LEN > 0u) ? (LOX_KV_KEY_MAX_LEN - 1u) : 0u;
+    uint32_t per_entry = 1u + max_key_len + 4u + LOX_KV_VAL_MAX_LEN + 4u;
+    uint32_t max_entries = (LOX_KV_MAX_KEYS > LOX_TXN_STAGE_KEYS) ? (LOX_KV_MAX_KEYS - LOX_TXN_STAGE_KEYS) : 0u;
     uint32_t kv_payload_max = max_entries * per_entry;
 
     memset(out, 0, sizeof(*out));
@@ -218,11 +218,11 @@ static int patch_page_crc(FILE *fp, uint32_t page_offset) {
             free(payload);
             return 0;
         }
-        payload_crc = microdb_crc32(payload_crc, payload, payload_len);
+        payload_crc = lox_crc32(payload_crc, payload, payload_len);
         free(payload);
     }
     put_u32(header + 20u, payload_crc);
-    header_crc = MICRODB_CRC32(header, 24u);
+    header_crc = LOX_CRC32(header, 24u);
     put_u32(header + 24u, header_crc);
     return write_at(fp, page_offset, header, sizeof(header));
 }
@@ -286,11 +286,11 @@ static int run_json_tool_on_file(const char *json_path) {
 }
 
 static void create_valid_image(const char *path, uint32_t capacity) {
-    microdb_storage_t storage;
-    microdb_cfg_t cfg;
-    microdb_t db;
-    microdb_schema_t schema;
-    microdb_table_t *table = NULL;
+    lox_storage_t storage;
+    lox_cfg_t cfg;
+    lox_t db;
+    lox_schema_t schema;
+    lox_table_t *table = NULL;
     uint32_t i;
     uint32_t u;
     uint8_t row[64];
@@ -300,36 +300,36 @@ static void create_valid_image(const char *path, uint32_t capacity) {
     memset(&db, 0, sizeof(db));
     memset(&schema, 0, sizeof(schema));
     memset(row, 0, sizeof(row));
-    microdb_port_posix_remove(path);
-    ASSERT_EQ(microdb_port_posix_init(&storage, path, capacity), MICRODB_OK);
+    lox_port_posix_remove(path);
+    ASSERT_EQ(lox_port_posix_init(&storage, path, capacity), LOX_OK);
 
     cfg.storage = &storage;
     cfg.ram_kb = 32u;
-    ASSERT_EQ(microdb_init(&db, &cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&db, &cfg), LOX_OK);
 
-    ASSERT_EQ(microdb_kv_set(&db, "k1", "aa", 2u, 0u), MICRODB_OK);
-    ASSERT_EQ(microdb_kv_set(&db, "k2", "bb", 2u, 0u), MICRODB_OK);
+    ASSERT_EQ(lox_kv_set(&db, "k1", "aa", 2u, 0u), LOX_OK);
+    ASSERT_EQ(lox_kv_set(&db, "k2", "bb", 2u, 0u), LOX_OK);
 
-    ASSERT_EQ(microdb_ts_register(&db, "s1", MICRODB_TS_U32, 0u), MICRODB_OK);
+    ASSERT_EQ(lox_ts_register(&db, "s1", LOX_TS_U32, 0u), LOX_OK);
     for (i = 0u; i < 4u; ++i) {
         u = i + 1u;
-        ASSERT_EQ(microdb_ts_insert(&db, "s1", i, &u), MICRODB_OK);
+        ASSERT_EQ(lox_ts_insert(&db, "s1", i, &u), LOX_OK);
     }
 
-    ASSERT_EQ(microdb_schema_init(&schema, "users", 4u), MICRODB_OK);
+    ASSERT_EQ(lox_schema_init(&schema, "users", 4u), LOX_OK);
     schema.schema_version = 1u;
-    ASSERT_EQ(microdb_schema_add(&schema, "id", MICRODB_COL_U32, sizeof(uint32_t), true), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_add(&schema, "age", MICRODB_COL_U8, sizeof(uint8_t), false), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_seal(&schema), MICRODB_OK);
-    ASSERT_EQ(microdb_table_create(&db, &schema), MICRODB_OK);
-    ASSERT_EQ(microdb_table_get(&db, "users", &table), MICRODB_OK);
+    ASSERT_EQ(lox_schema_add(&schema, "id", LOX_COL_U32, sizeof(uint32_t), true), LOX_OK);
+    ASSERT_EQ(lox_schema_add(&schema, "age", LOX_COL_U8, sizeof(uint8_t), false), LOX_OK);
+    ASSERT_EQ(lox_schema_seal(&schema), LOX_OK);
+    ASSERT_EQ(lox_table_create(&db, &schema), LOX_OK);
+    ASSERT_EQ(lox_table_get(&db, "users", &table), LOX_OK);
     u = 10u;
-    ASSERT_EQ(microdb_row_set(table, row, "id", &u), MICRODB_OK);
+    ASSERT_EQ(lox_row_set(table, row, "id", &u), LOX_OK);
     row[4] = 33u;
-    ASSERT_EQ(microdb_rel_insert(&db, table, row), MICRODB_OK);
+    ASSERT_EQ(lox_rel_insert(&db, table, row), LOX_OK);
 
-    ASSERT_EQ(microdb_deinit(&db), MICRODB_OK);
-    microdb_port_posix_deinit(&storage);
+    ASSERT_EQ(lox_deinit(&db), LOX_OK);
+    lox_port_posix_deinit(&storage);
 }
 
 static void corrupt_kv_overlap(const char *path) {
@@ -472,21 +472,21 @@ static void append_orphaned_txn_kv(const char *path) {
     payload_len = 13u;
 
     memset(entry, 0, sizeof(entry));
-    put_u32(entry + 0u, MICRODB_WAL_ENTRY_MAGIC);
+    put_u32(entry + 0u, LOX_WAL_ENTRY_MAGIC);
     put_u32(entry + 4u, entry_count + 1u);
-    entry[8] = MICRODB_WAL_ENGINE_TXN_KV;
-    entry[9] = MICRODB_WAL_OP_SET_INSERT;
+    entry[8] = LOX_WAL_ENGINE_TXN_KV;
+    entry[9] = LOX_WAL_OP_SET_INSERT;
     put_u16(entry + 10u, (uint16_t)payload_len);
     memcpy(entry + 16u, payload, payload_len);
-    put_u32(entry + 12u, MICRODB_CRC32(entry, 12u));
+    put_u32(entry + 12u, LOX_CRC32(entry, 12u));
     crc = get_u32(entry + 12u);
-    crc = microdb_crc32(crc, payload, payload_len);
+    crc = lox_crc32(crc, payload, payload_len);
     put_u32(entry + 12u, crc);
 
     ASSERT_EQ(write_at(fp, off, entry, 16u + align_u32((uint32_t)payload_len, 4u)), 1);
     put_u32(wal_header + 8u, entry_count + 1u);
     put_u32(wal_header + 12u, entry_count + 1u);
-    put_u32(wal_header + 16u, MICRODB_CRC32(wal_header, 16u));
+    put_u32(wal_header + 16u, LOX_CRC32(wal_header, 16u));
     ASSERT_EQ(write_at(fp, l.wal_offset, wal_header, sizeof(wal_header)), 1);
     ASSERT_EQ(fclose(fp), 0);
 }
@@ -502,7 +502,7 @@ MDB_TEST(verify_kv_page_overlap_detected) {
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(contains_text(output, "\"overlaps_detected\": "), 1);
     ASSERT_EQ(contains_text(output, "WARN: kv decode"), 1);
-    microdb_port_posix_remove(path);
+    lox_port_posix_remove(path);
 }
 
 MDB_TEST(verify_ts_ring_inconsistent_count) {
@@ -516,7 +516,7 @@ MDB_TEST(verify_ts_ring_inconsistent_count) {
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(contains_text(output, "\"ring_anomalies\": "), 1);
     ASSERT_EQ(contains_text(output, "WARN: ts decode"), 1);
-    microdb_port_posix_remove(path);
+    lox_port_posix_remove(path);
 }
 
 MDB_TEST(verify_rel_bitmap_mismatch) {
@@ -530,7 +530,7 @@ MDB_TEST(verify_rel_bitmap_mismatch) {
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(contains_text(output, "\"bitmap_mismatches\": "), 1);
     ASSERT_EQ(contains_text(output, "WARN: rel decode"), 1);
-    microdb_port_posix_remove(path);
+    lox_port_posix_remove(path);
 }
 
 MDB_TEST(verify_wal_orphaned_txn_detected) {
@@ -543,7 +543,7 @@ MDB_TEST(verify_wal_orphaned_txn_detected) {
     rc = run_verify_capture(path, "--json", output, sizeof(output));
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(contains_text(output, "\"txn_orphaned\": 1"), 1);
-    microdb_port_posix_remove(path);
+    lox_port_posix_remove(path);
 }
 
 MDB_TEST(verify_check_flag_exits_nonzero_on_warn) {
@@ -557,7 +557,7 @@ MDB_TEST(verify_check_flag_exits_nonzero_on_warn) {
     ASSERT_EQ(rc, 4);
     ASSERT_EQ(contains_text(output, "verdict:"), 1);
     ASSERT_EQ(contains_text(output, "WARN:"), 1);
-    microdb_port_posix_remove(path);
+    lox_port_posix_remove(path);
 }
 
 MDB_TEST(verify_json_is_valid) {
@@ -578,7 +578,7 @@ MDB_TEST(verify_json_is_valid) {
     rc = run_json_tool_on_file(out_path);
     ASSERT_EQ(rc, 0);
     remove(out_path);
-    microdb_port_posix_remove(path);
+    lox_port_posix_remove(path);
 }
 
 static void setup_noop(void) {}

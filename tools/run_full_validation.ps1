@@ -104,7 +104,7 @@ if (-not $SkipDesktop) {
 
 if (-not $SkipEsp32) {
     $summary += "## ESP32 Runs"
-    $espScript = Join-Path $root "bench\microdb_esp32_s3_bench\run_bench.ps1"
+    $espScript = Join-Path $root "bench\lox_esp32_s3_bench\run_bench.ps1"
     $espProfiles = @(
         @{ Name = "deterministic"; Commands = @("run_det", "metrics") },
         @{ Name = "balanced"; Commands = @("profile balanced", "run", "metrics") },

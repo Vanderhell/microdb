@@ -1,4 +1,4 @@
 name=overflow_row_count
 mutation=overflow_row_count
-expect=MICRODB_OK_OR_CORRUPT
+expect=LOX_OK_OR_CORRUPT
 description=Set REL row_count above max_rows in persisted payload.

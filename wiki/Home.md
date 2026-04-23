@@ -1,6 +1,6 @@
-# microdb Wiki
+# loxdb Wiki
 
-microdb is a compact C99 embedded database for microcontrollers and small edge runtimes.
+loxdb is a compact C99 embedded database for microcontrollers and small edge runtimes.
 It combines three engines behind one API:
 
 - KV for config, cached state, and TTL-backed values
@@ -9,7 +9,7 @@ It combines three engines behind one API:
 
 ## Highlights
 
-- single allocation in `microdb_init()`
+- single allocation in `lox_init()`
 - fixed RAM budget with predictable behavior
 - zero external dependencies
 - RAM-only mode or persistent mode through a storage HAL
@@ -28,5 +28,5 @@ It combines three engines behind one API:
 
 ## Repository
 
-- Source: `https://github.com/Vanderhell/microdb`
-- README: `https://github.com/Vanderhell/microdb#readme`
+- Source: `https://github.com/Vanderhell/loxdb`
+- README: `https://github.com/Vanderhell/loxdb#readme`

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 #include "microtest.h"
-#include "microdb.h"
-#include "../port/posix/microdb_port_posix.h"
-#include "../src/microdb_internal.h"
+#include "lox.h"
+#include "../port/posix/lox_port_posix.h"
+#include "../src/lox_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef MICRODB_REL_CORPUS_DIR
-#define MICRODB_REL_CORPUS_DIR "tests/corpus/rel"
+#ifndef LOX_REL_CORPUS_DIR
+#define LOX_REL_CORPUS_DIR "tests/corpus/rel"
 #endif
 
 enum {
@@ -29,41 +29,41 @@ typedef struct {
     uint32_t rel_payload_offset_b;
 } rel_page_offsets_t;
 
-static microdb_t g_db;
-static microdb_storage_t g_storage;
+static lox_t g_db;
+static lox_storage_t g_storage;
 static char g_db_path[128];
 static unsigned g_seq = 0u;
 
 static void close_db_if_open(void) {
-    if (microdb_core_const(&g_db)->magic == MICRODB_MAGIC) {
-        (void)microdb_deinit(&g_db);
+    if (lox_core_const(&g_db)->magic == LOX_MAGIC) {
+        (void)lox_deinit(&g_db);
     }
-    microdb_port_posix_deinit(&g_storage);
+    lox_port_posix_deinit(&g_storage);
 }
 
 static void reset_and_open_db(void) {
-    microdb_cfg_t cfg;
+    lox_cfg_t cfg;
     uint32_t db_bytes = 131072u;
 
     memset(&g_db, 0, sizeof(g_db));
     memset(&g_storage, 0, sizeof(g_storage));
-    ASSERT_EQ(microdb_port_posix_init(&g_storage, g_db_path, db_bytes), MICRODB_OK);
+    ASSERT_EQ(lox_port_posix_init(&g_storage, g_db_path, db_bytes), LOX_OK);
     memset(&cfg, 0, sizeof(cfg));
     cfg.storage = &g_storage;
     cfg.ram_kb = 32u;
-    ASSERT_EQ(microdb_init(&g_db, &cfg), MICRODB_OK);
+    ASSERT_EQ(lox_init(&g_db, &cfg), LOX_OK);
 }
 
 static void setup_fixture(void) {
     g_seq++;
     (void)snprintf(g_db_path, sizeof(g_db_path), "rel_corruption_replay_%u.bin", g_seq);
-    microdb_port_posix_remove(g_db_path);
+    lox_port_posix_remove(g_db_path);
     reset_and_open_db();
 }
 
 static void teardown_fixture(void) {
     close_db_if_open();
-    microdb_port_posix_remove(g_db_path);
+    lox_port_posix_remove(g_db_path);
 }
 
 static void write_u32_le(FILE *fp, uint32_t off, uint32_t v) {
@@ -102,36 +102,36 @@ static uint8_t read_u8(FILE *fp, uint32_t off) {
 }
 
 static void seed_rel_payload(rel_page_offsets_t *out) {
-    microdb_schema_t schema;
-    microdb_table_t *table = NULL;
+    lox_schema_t schema;
+    lox_table_t *table = NULL;
     uint8_t row[64];
     uint32_t id;
     uint8_t age;
-    const microdb_core_t *core;
+    const lox_core_t *core;
 
-    ASSERT_EQ(microdb_schema_init(&schema, "users", 16u), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_add(&schema, "id", MICRODB_COL_U32, sizeof(uint32_t), true), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_add(&schema, "age", MICRODB_COL_U8, sizeof(uint8_t), false), MICRODB_OK);
-    ASSERT_EQ(microdb_schema_seal(&schema), MICRODB_OK);
-    ASSERT_EQ(microdb_table_create(&g_db, &schema), MICRODB_OK);
-    ASSERT_EQ(microdb_table_get(&g_db, "users", &table), MICRODB_OK);
+    ASSERT_EQ(lox_schema_init(&schema, "users", 16u), LOX_OK);
+    ASSERT_EQ(lox_schema_add(&schema, "id", LOX_COL_U32, sizeof(uint32_t), true), LOX_OK);
+    ASSERT_EQ(lox_schema_add(&schema, "age", LOX_COL_U8, sizeof(uint8_t), false), LOX_OK);
+    ASSERT_EQ(lox_schema_seal(&schema), LOX_OK);
+    ASSERT_EQ(lox_table_create(&g_db, &schema), LOX_OK);
+    ASSERT_EQ(lox_table_get(&g_db, "users", &table), LOX_OK);
 
     memset(row, 0, sizeof(row));
     id = 1u;
     age = 21u;
-    ASSERT_EQ(microdb_row_set(table, row, "id", &id), MICRODB_OK);
-    ASSERT_EQ(microdb_row_set(table, row, "age", &age), MICRODB_OK);
-    ASSERT_EQ(microdb_rel_insert(&g_db, table, row), MICRODB_OK);
+    ASSERT_EQ(lox_row_set(table, row, "id", &id), LOX_OK);
+    ASSERT_EQ(lox_row_set(table, row, "age", &age), LOX_OK);
+    ASSERT_EQ(lox_rel_insert(&g_db, table, row), LOX_OK);
 
     memset(row, 0, sizeof(row));
     id = 2u;
     age = 34u;
-    ASSERT_EQ(microdb_row_set(table, row, "id", &id), MICRODB_OK);
-    ASSERT_EQ(microdb_row_set(table, row, "age", &age), MICRODB_OK);
-    ASSERT_EQ(microdb_rel_insert(&g_db, table, row), MICRODB_OK);
+    ASSERT_EQ(lox_row_set(table, row, "id", &id), LOX_OK);
+    ASSERT_EQ(lox_row_set(table, row, "age", &age), LOX_OK);
+    ASSERT_EQ(lox_rel_insert(&g_db, table, row), LOX_OK);
 
-    ASSERT_EQ(microdb_flush(&g_db), MICRODB_OK);
-    core = microdb_core_const(&g_db);
+    ASSERT_EQ(lox_flush(&g_db), LOX_OK);
+    core = lox_core_const(&g_db);
     out->rel_page_offset_a = core->layout.bank_a_offset + core->layout.kv_size + core->layout.ts_size;
     out->rel_page_offset_b = core->layout.bank_b_offset + core->layout.kv_size + core->layout.ts_size;
     out->rel_payload_offset_a = out->rel_page_offset_a + REL_PAGE_HEADER_SIZE;
@@ -184,17 +184,17 @@ static void load_fixture_file(const char *path, rel_fixture_t *fx) {
     ASSERT_EQ(fx->expect[0] != '\0', 1);
 }
 
-static microdb_err_t parse_expect_code(const char *s) {
-    if (strcmp(s, "MICRODB_OK") == 0) {
-        return MICRODB_OK;
+static lox_err_t parse_expect_code(const char *s) {
+    if (strcmp(s, "LOX_OK") == 0) {
+        return LOX_OK;
     }
-    if (strcmp(s, "MICRODB_ERR_CORRUPT") == 0) {
-        return MICRODB_ERR_CORRUPT;
+    if (strcmp(s, "LOX_ERR_CORRUPT") == 0) {
+        return LOX_ERR_CORRUPT;
     }
-    if (strcmp(s, "MICRODB_OK_OR_CORRUPT") == 0) {
-        return (microdb_err_t)777;
+    if (strcmp(s, "LOX_OK_OR_CORRUPT") == 0) {
+        return (lox_err_t)777;
     }
-    return MICRODB_ERR_INVALID;
+    return LOX_ERR_INVALID;
 }
 
 static void apply_rel_mutation(const char *db_path, const rel_page_offsets_t *off, const char *mutation) {
@@ -217,7 +217,7 @@ static void apply_rel_mutation(const char *db_path, const rel_page_offsets_t *of
         }
     } else if (strcmp(mutation, "overflow_table_name_len") == 0) {
         for (i = 0u; i < 2u; ++i) {
-            uint8_t bad = (uint8_t)MICRODB_REL_TABLE_NAME_LEN;
+            uint8_t bad = (uint8_t)LOX_REL_TABLE_NAME_LEN;
             ASSERT_EQ(fseek(fp, (long)payload_offsets[i], SEEK_SET), 0);
             ASSERT_EQ(fwrite(&bad, 1u, 1u, fp), 1u);
         }
@@ -225,7 +225,7 @@ static void apply_rel_mutation(const char *db_path, const rel_page_offsets_t *of
         for (i = 0u; i < 2u; ++i) {
             uint8_t name_len = read_u8(fp, payload_offsets[i]);
             uint32_t col_count_off = payload_offsets[i] + 1u + (uint32_t)name_len + 2u + 4u + 4u;
-            write_u32_le(fp, col_count_off, (uint32_t)MICRODB_REL_MAX_COLS + 1u);
+            write_u32_le(fp, col_count_off, (uint32_t)LOX_REL_MAX_COLS + 1u);
         }
     } else if (strcmp(mutation, "overflow_row_count") == 0) {
         for (i = 0u; i < 2u; ++i) {
@@ -246,17 +246,17 @@ static void run_fixture_case(const char *fixture_name) {
     char fixture_path[256];
     rel_fixture_t fx;
     rel_page_offsets_t off;
-    microdb_cfg_t cfg;
-    microdb_err_t expected;
-    microdb_err_t rc;
+    lox_cfg_t cfg;
+    lox_err_t expected;
+    lox_err_t rc;
 
-    (void)snprintf(fixture_path, sizeof(fixture_path), "%s/%s", MICRODB_REL_CORPUS_DIR, fixture_name);
+    (void)snprintf(fixture_path, sizeof(fixture_path), "%s/%s", LOX_REL_CORPUS_DIR, fixture_name);
     load_fixture_file(fixture_path, &fx);
     expected = parse_expect_code(fx.expect);
-    ASSERT_EQ(expected == MICRODB_ERR_INVALID, 0);
+    ASSERT_EQ(expected == LOX_ERR_INVALID, 0);
 
     close_db_if_open();
-    microdb_port_posix_remove(g_db_path);
+    lox_port_posix_remove(g_db_path);
     reset_and_open_db();
     seed_rel_payload(&off);
     close_db_if_open();
@@ -264,13 +264,13 @@ static void run_fixture_case(const char *fixture_name) {
 
     memset(&g_db, 0, sizeof(g_db));
     memset(&g_storage, 0, sizeof(g_storage));
-    ASSERT_EQ(microdb_port_posix_init(&g_storage, g_db_path, 131072u), MICRODB_OK);
+    ASSERT_EQ(lox_port_posix_init(&g_storage, g_db_path, 131072u), LOX_OK);
     memset(&cfg, 0, sizeof(cfg));
     cfg.storage = &g_storage;
     cfg.ram_kb = 32u;
-    rc = microdb_init(&g_db, &cfg);
+    rc = lox_init(&g_db, &cfg);
     if ((int)expected == 777) {
-        ASSERT_EQ((rc == MICRODB_OK || rc == MICRODB_ERR_CORRUPT), 1);
+        ASSERT_EQ((rc == LOX_OK || rc == LOX_ERR_CORRUPT), 1);
     } else {
         ASSERT_EQ(rc, expected);
     }

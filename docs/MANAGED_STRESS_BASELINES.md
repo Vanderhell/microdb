@@ -7,13 +7,13 @@ for managed backend stress lanes.
 
 Configured in `CMakeLists.txt` as cache variables:
 
-- `MICRODB_MANAGED_STRESS_SMOKE_MAX_MS` (default: `5000`)
-- `MICRODB_MANAGED_STRESS_LONG_MAX_MS` (default: `20000`)
+- `LOX_MANAGED_STRESS_SMOKE_MAX_MS` (default: `5000`)
+- `LOX_MANAGED_STRESS_LONG_MAX_MS` (default: `20000`)
 
 Override example:
 
 ```powershell
-cmake -S . -B build -DMICRODB_MANAGED_STRESS_SMOKE_MAX_MS=3000 -DMICRODB_MANAGED_STRESS_LONG_MAX_MS=12000
+cmake -S . -B build -DLOX_MANAGED_STRESS_SMOKE_MAX_MS=3000 -DLOX_MANAGED_STRESS_LONG_MAX_MS=12000
 ```
 
 ## CI Presets (Current)
@@ -21,22 +21,22 @@ cmake -S . -B build -DMICRODB_MANAGED_STRESS_SMOKE_MAX_MS=3000 -DMICRODB_MANAGED
 Defined in `CMakePresets.json` and consumed by `.github/workflows/ci.yml`:
 
 - `ci-debug-linux`:
-  - `MICRODB_MANAGED_STRESS_SMOKE_MAX_MS=3000`
-  - `MICRODB_MANAGED_STRESS_LONG_MAX_MS=12000`
+  - `LOX_MANAGED_STRESS_SMOKE_MAX_MS=3000`
+  - `LOX_MANAGED_STRESS_LONG_MAX_MS=12000`
 - `ci-debug-windows`:
-  - `MICRODB_MANAGED_STRESS_SMOKE_MAX_MS=5000`
-  - `MICRODB_MANAGED_STRESS_LONG_MAX_MS=20000`
+  - `LOX_MANAGED_STRESS_SMOKE_MAX_MS=5000`
+  - `LOX_MANAGED_STRESS_LONG_MAX_MS=20000`
 
 ## Release Presets (Current)
 
 Defined in `CMakePresets.json` and consumed by `.github/workflows/release.yml`:
 
 - `release-linux`:
-  - `MICRODB_MANAGED_STRESS_SMOKE_MAX_MS=4000`
-  - `MICRODB_MANAGED_STRESS_LONG_MAX_MS=16000`
+  - `LOX_MANAGED_STRESS_SMOKE_MAX_MS=4000`
+  - `LOX_MANAGED_STRESS_LONG_MAX_MS=16000`
 - `release-windows`:
-  - `MICRODB_MANAGED_STRESS_SMOKE_MAX_MS=7000`
-  - `MICRODB_MANAGED_STRESS_LONG_MAX_MS=25000`
+  - `LOX_MANAGED_STRESS_SMOKE_MAX_MS=7000`
+  - `LOX_MANAGED_STRESS_LONG_MAX_MS=25000`
 
 ## Reference Baselines
 

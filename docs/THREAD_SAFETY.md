@@ -1,24 +1,24 @@
 # Thread Safety Hooks
 
-microdb exposes four optional lock hooks in `microdb_cfg_t`:
+loxdb exposes four optional lock hooks in `lox_cfg_t`:
 
-- `lock_create`: called once during `microdb_init`.
-- `lock`: called at entry of selected public API calls when `MICRODB_THREAD_SAFE=1`.
+- `lock_create`: called once during `lox_init`.
+- `lock`: called at entry of selected public API calls when `LOX_THREAD_SAFE=1`.
 - `unlock`: called at exit of those API calls.
-- `lock_destroy`: called once during `microdb_deinit`.
+- `lock_destroy`: called once during `lox_deinit`.
 
 If hooks are `NULL`, locking is a no-op.
 
 ## Callback And Copying Notes
 
-- `microdb_kv_iter`, `microdb_ts_query`, `microdb_rel_find`, and `microdb_rel_iter` invoke callbacks without DB lock held, then re-lock before continuing.
-- `microdb_rel_find` and `microdb_rel_iter` detect concurrent table mutation after re-lock and return `MICRODB_ERR_MODIFIED`.
-- `microdb_rel_find_by` copies row bytes into caller `out_buf` while lock is still held. For larger row sizes this can increase lock hold time and create latency spikes for contending threads.
+- `lox_kv_iter`, `lox_ts_query`, `lox_rel_find`, and `lox_rel_iter` invoke callbacks without DB lock held, then re-lock before continuing.
+- `lox_rel_find` and `lox_rel_iter` detect concurrent table mutation after re-lock and return `LOX_ERR_MODIFIED`.
+- `lox_rel_find_by` copies row bytes into caller `out_buf` while lock is still held. For larger row sizes this can increase lock hold time and create latency spikes for contending threads.
 
 ## FreeRTOS Example
 
 ```c
-#include "microdb.h"
+#include "lox.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
@@ -38,7 +38,7 @@ static void db_lock_destroy(void *hdl) {
     vSemaphoreDelete((SemaphoreHandle_t)hdl);
 }
 
-microdb_cfg_t cfg = {
+lox_cfg_t cfg = {
     .storage = NULL,
     .ram_kb = 32u,
     .lock_create = db_lock_create,
@@ -51,9 +51,9 @@ microdb_cfg_t cfg = {
 ## Bare-Metal No-Op Example
 
 ```c
-#include "microdb.h"
+#include "lox.h"
 
-microdb_cfg_t cfg = {
+lox_cfg_t cfg = {
     .storage = NULL,
     .ram_kb = 32u,
     .lock_create = NULL,

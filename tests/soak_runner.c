@@ -3,8 +3,8 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 
-#include "microdb.h"
-#include "../port/posix/microdb_port_posix.h"
+#include "lox.h"
+#include "../port/posix/lox_port_posix.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -57,7 +57,7 @@ typedef struct {
     int rel_present[MODEL_REL_IDS];
     uint32_t rel_count;
     int ts_has;
-    microdb_timestamp_t ts_last_ts;
+    lox_timestamp_t ts_last_ts;
     uint32_t ts_last_val;
 } model_t;
 
@@ -73,8 +73,8 @@ typedef struct {
     uint64_t spikes_gt_5ms;
 } stats_t;
 
-static microdb_t g_db;
-static microdb_storage_t g_storage;
+static lox_t g_db;
+static lox_storage_t g_storage;
 static uint32_t g_rng = 0xA11CE55u;
 
 static int fail_status(const char *op, const char *status_name, int status_code, const char *detail) {
@@ -86,8 +86,8 @@ static int fail_status(const char *op, const char *status_name, int status_code,
     return status_code;
 }
 
-static int fail_microdb(const char *op, microdb_err_t rc, int ret) {
-    fprintf(stderr, "%s failed: %s (%d)\n", op, microdb_err_to_string(rc), (int)rc);
+static int fail_loxdb(const char *op, lox_err_t rc, int ret) {
+    fprintf(stderr, "%s failed: %s (%d)\n", op, lox_err_to_string(rc), (int)rc);
     return ret;
 }
 
@@ -105,21 +105,21 @@ static int parse_u32_arg(const char *arg, uint32_t *out) {
 }
 
 static int open_db(const cfg_t *cfg, int wipe) {
-    microdb_cfg_t dbc;
-    microdb_err_t rc;
-    if (wipe) microdb_port_posix_remove(cfg->path);
+    lox_cfg_t dbc;
+    lox_err_t rc;
+    if (wipe) lox_port_posix_remove(cfg->path);
     memset(&g_db, 0, sizeof(g_db));
     memset(&g_storage, 0, sizeof(g_storage));
-    rc = microdb_port_posix_init(&g_storage, cfg->path, 262144u);
-    if (rc != MICRODB_OK) {
-        return fail_microdb("microdb_port_posix_init", rc, 0);
+    rc = lox_port_posix_init(&g_storage, cfg->path, 262144u);
+    if (rc != LOX_OK) {
+        return fail_loxdb("lox_port_posix_init", rc, 0);
     }
     memset(&dbc, 0, sizeof(dbc));
     dbc.storage = &g_storage;
     dbc.ram_kb = cfg->ram_kb;
-    rc = microdb_init(&g_db, &dbc);
-    if (rc != MICRODB_OK) {
-        return fail_microdb("microdb_init", rc, 0);
+    rc = lox_init(&g_db, &dbc);
+    if (rc != LOX_OK) {
+        return fail_loxdb("lox_init", rc, 0);
     }
     return 1;
 }
@@ -168,41 +168,41 @@ static void set_profile_defaults(cfg_t *cfg, const char *profile) {
 
 static int do_reopen(const cfg_t *cfg, int power_loss, uint64_t *dt_us) {
     uint64_t t0 = now_us();
-    microdb_err_t rc;
+    lox_err_t rc;
     if (power_loss) {
-        microdb_port_posix_simulate_power_loss(&g_storage);
+        lox_port_posix_simulate_power_loss(&g_storage);
     }
-    rc = microdb_deinit(&g_db);
-    if (rc != MICRODB_OK) return fail_microdb("microdb_deinit", rc, 0);
-    microdb_port_posix_deinit(&g_storage);
+    rc = lox_deinit(&g_db);
+    if (rc != LOX_OK) return fail_loxdb("lox_deinit", rc, 0);
+    lox_port_posix_deinit(&g_storage);
     if (!open_db(cfg, 0)) return 0;
     *dt_us = now_us() - t0;
     return 1;
 }
 
 static int ensure_ts(void) {
-    microdb_err_t rc = microdb_ts_register(&g_db, "soak_ts", MICRODB_TS_U32, 0u);
-    if (rc == MICRODB_OK || rc == MICRODB_ERR_EXISTS) return 1;
-    return fail_microdb("microdb_ts_register(soak_ts)", rc, 0);
+    lox_err_t rc = lox_ts_register(&g_db, "soak_ts", LOX_TS_U32, 0u);
+    if (rc == LOX_OK || rc == LOX_ERR_EXISTS) return 1;
+    return fail_loxdb("lox_ts_register(soak_ts)", rc, 0);
 }
 
-static int ensure_rel(microdb_table_t **out) {
-    microdb_schema_t s;
-    microdb_err_t rc = microdb_table_get(&g_db, "soak_rel", out);
-    if (rc == MICRODB_OK) return 1;
-    if (rc != MICRODB_ERR_NOT_FOUND) return fail_microdb("microdb_table_get(soak_rel)", rc, 0);
-    rc = microdb_schema_init(&s, "soak_rel", 128u);
-    if (rc != MICRODB_OK) return fail_microdb("microdb_schema_init(soak_rel)", rc, 0);
-    rc = microdb_schema_add(&s, "id", MICRODB_COL_U32, sizeof(uint32_t), true);
-    if (rc != MICRODB_OK) return fail_microdb("microdb_schema_add(soak_rel.id)", rc, 0);
-    rc = microdb_schema_add(&s, "v", MICRODB_COL_U8, sizeof(uint8_t), false);
-    if (rc != MICRODB_OK) return fail_microdb("microdb_schema_add(soak_rel.v)", rc, 0);
-    rc = microdb_schema_seal(&s);
-    if (rc != MICRODB_OK) return fail_microdb("microdb_schema_seal(soak_rel)", rc, 0);
-    rc = microdb_table_create(&g_db, &s);
-    if (rc != MICRODB_OK && rc != MICRODB_ERR_EXISTS) return fail_microdb("microdb_table_create(soak_rel)", rc, 0);
-    rc = microdb_table_get(&g_db, "soak_rel", out);
-    if (rc != MICRODB_OK) return fail_microdb("microdb_table_get(soak_rel,created)", rc, 0);
+static int ensure_rel(lox_table_t **out) {
+    lox_schema_t s;
+    lox_err_t rc = lox_table_get(&g_db, "soak_rel", out);
+    if (rc == LOX_OK) return 1;
+    if (rc != LOX_ERR_NOT_FOUND) return fail_loxdb("lox_table_get(soak_rel)", rc, 0);
+    rc = lox_schema_init(&s, "soak_rel", 128u);
+    if (rc != LOX_OK) return fail_loxdb("lox_schema_init(soak_rel)", rc, 0);
+    rc = lox_schema_add(&s, "id", LOX_COL_U32, sizeof(uint32_t), true);
+    if (rc != LOX_OK) return fail_loxdb("lox_schema_add(soak_rel.id)", rc, 0);
+    rc = lox_schema_add(&s, "v", LOX_COL_U8, sizeof(uint8_t), false);
+    if (rc != LOX_OK) return fail_loxdb("lox_schema_add(soak_rel.v)", rc, 0);
+    rc = lox_schema_seal(&s);
+    if (rc != LOX_OK) return fail_loxdb("lox_schema_seal(soak_rel)", rc, 0);
+    rc = lox_table_create(&g_db, &s);
+    if (rc != LOX_OK && rc != LOX_ERR_EXISTS) return fail_loxdb("lox_table_create(soak_rel)", rc, 0);
+    rc = lox_table_get(&g_db, "soak_rel", out);
+    if (rc != LOX_OK) return fail_loxdb("lox_table_get(soak_rel,created)", rc, 0);
     return 1;
 }
 
@@ -214,7 +214,7 @@ static void track_latency(uint64_t dt_us, uint64_t *max_us, stats_t *s) {
 
 static int verify_model(const model_t *m) {
     uint32_t i;
-    microdb_table_t *t = NULL;
+    lox_table_t *t = NULL;
     uint8_t row[64];
     uint32_t cnt = 0u;
 
@@ -224,10 +224,10 @@ static int verify_model(const model_t *m) {
         uint32_t probe_in = 0xA11CE55u;
         uint32_t probe_out = 0u;
         size_t out_len = 0u;
-        microdb_err_t rc = microdb_kv_put(&g_db, "kv_probe", &probe_in, sizeof(probe_in));
-        if (rc != MICRODB_OK) return fail_microdb("verify microdb_kv_put(kv_probe)", rc, 0);
-        rc = microdb_kv_get(&g_db, "kv_probe", &probe_out, sizeof(probe_out), &out_len);
-        if (rc != MICRODB_OK) return fail_microdb("verify microdb_kv_get(kv_probe)", rc, 0);
+        lox_err_t rc = lox_kv_put(&g_db, "kv_probe", &probe_in, sizeof(probe_in));
+        if (rc != LOX_OK) return fail_loxdb("verify lox_kv_put(kv_probe)", rc, 0);
+        rc = lox_kv_get(&g_db, "kv_probe", &probe_out, sizeof(probe_out), &out_len);
+        if (rc != LOX_OK) return fail_loxdb("verify lox_kv_get(kv_probe)", rc, 0);
         if (out_len != sizeof(probe_out) || probe_out != probe_in) {
             fprintf(stderr, "verify kv probe mismatch got=%u exp=%u\n", probe_out, probe_in);
             return 0;
@@ -235,9 +235,9 @@ static int verify_model(const model_t *m) {
     }
 
     if (m->ts_has) {
-        microdb_ts_sample_t sample;
-        microdb_err_t rc = microdb_ts_last(&g_db, "soak_ts", &sample);
-        if (rc != MICRODB_OK) return fail_microdb("verify microdb_ts_last(soak_ts)", rc, 0);
+        lox_ts_sample_t sample;
+        lox_err_t rc = lox_ts_last(&g_db, "soak_ts", &sample);
+        if (rc != LOX_OK) return fail_loxdb("verify lox_ts_last(soak_ts)", rc, 0);
         if (sample.ts != m->ts_last_ts || sample.v.u32 != m->ts_last_val) {
             fprintf(stderr, "verify ts mismatch got_ts=%u exp_ts=%u got=%u exp=%u\n",
                     (unsigned)sample.ts, (unsigned)m->ts_last_ts, sample.v.u32, m->ts_last_val);
@@ -250,8 +250,8 @@ static int verify_model(const model_t *m) {
         return 0;
     }
     {
-        microdb_err_t rc = microdb_rel_count(t, &cnt);
-        if (rc != MICRODB_OK) return fail_microdb("verify microdb_rel_count(soak_rel)", rc, 0);
+        lox_err_t rc = lox_rel_count(t, &cnt);
+        if (rc != LOX_OK) return fail_loxdb("verify lox_rel_count(soak_rel)", rc, 0);
     }
     if (cnt != m->rel_count) {
         fprintf(stderr, "verify rel count mismatch got=%u exp=%u\n", cnt, m->rel_count);
@@ -260,8 +260,8 @@ static int verify_model(const model_t *m) {
 
     for (i = 0u; i < MODEL_REL_IDS; ++i) {
         if (m->rel_present[i]) {
-            microdb_err_t rc = microdb_rel_find_by(&g_db, t, "id", &i, row);
-            if (rc != MICRODB_OK) return fail_microdb("verify microdb_rel_find_by(soak_rel.id)", rc, 0);
+            lox_err_t rc = lox_rel_find_by(&g_db, t, "id", &i, row);
+            if (rc != LOX_OK) return fail_loxdb("verify lox_rel_find_by(soak_rel.id)", rc, 0);
         }
     }
     return 1;
@@ -271,7 +271,7 @@ int main(int argc, char **argv) {
     cfg_t cfg;
     model_t model;
     stats_t st;
-    microdb_table_t *t = NULL;
+    lox_table_t *t = NULL;
     uint32_t i;
 
     memset(&cfg, 0, sizeof(cfg));
@@ -327,8 +327,8 @@ int main(int argc, char **argv) {
             uint32_t val = rnd_next();
             char key[16];
             snprintf(key, sizeof(key), "k%02u", (unsigned)idx);
-            microdb_err_t rc = microdb_kv_put(&g_db, key, &val, sizeof(val));
-            if (rc != MICRODB_OK) return fail_microdb("microdb_kv_put(loop)", rc, 1);
+            lox_err_t rc = lox_kv_put(&g_db, key, &val, sizeof(val));
+            if (rc != LOX_OK) return fail_loxdb("lox_kv_put(loop)", rc, 1);
             model.kv[idx].present = 1;
             model.kv[idx].value = val;
             dt = now_us() - t0;
@@ -337,14 +337,14 @@ int main(int argc, char **argv) {
             uint32_t idx = rnd_next() % MODEL_KV_KEYS;
             char key[16];
             snprintf(key, sizeof(key), "k%02u", (unsigned)idx);
-            (void)microdb_kv_del(&g_db, key);
+            (void)lox_kv_del(&g_db, key);
             model.kv[idx].present = 0;
             dt = now_us() - t0;
             track_latency(dt, &st.max_kv_del_us, &st);
         } else if (op == 2u) {
             uint32_t v = rnd_next();
-            microdb_err_t rc = microdb_ts_insert(&g_db, "soak_ts", i, &v);
-            if (rc != MICRODB_OK) return fail_microdb("microdb_ts_insert(loop)", rc, 1);
+            lox_err_t rc = lox_ts_insert(&g_db, "soak_ts", i, &v);
+            if (rc != LOX_OK) return fail_loxdb("lox_ts_insert(loop)", rc, 1);
             model.ts_has = 1;
             model.ts_last_ts = i;
             model.ts_last_val = v;
@@ -354,17 +354,17 @@ int main(int argc, char **argv) {
             uint32_t id = rnd_next() % MODEL_REL_IDS;
             uint8_t row[64] = {0};
             uint8_t rv = (uint8_t)(id & 0xFFu);
-            microdb_err_t rc = microdb_row_set(t, row, "id", &id);
-            if (rc != MICRODB_OK) return fail_microdb("microdb_row_set(loop,id)", rc, 1);
-            rc = microdb_row_set(t, row, "v", &rv);
-            if (rc != MICRODB_OK) return fail_microdb("microdb_row_set(loop,v)", rc, 1);
+            lox_err_t rc = lox_row_set(t, row, "id", &id);
+            if (rc != LOX_OK) return fail_loxdb("lox_row_set(loop,id)", rc, 1);
+            rc = lox_row_set(t, row, "v", &rv);
+            if (rc != LOX_OK) return fail_loxdb("lox_row_set(loop,v)", rc, 1);
             if (!model.rel_present[id]) {
-                rc = microdb_rel_insert(&g_db, t, row);
-                if (rc == MICRODB_OK) {
+                rc = lox_rel_insert(&g_db, t, row);
+                if (rc == LOX_OK) {
                     model.rel_present[id] = 1;
                     model.rel_count++;
-                } else if (rc != MICRODB_ERR_FULL) {
-                    return fail_microdb("microdb_rel_insert(loop)", rc, 1);
+                } else if (rc != LOX_ERR_FULL) {
+                    return fail_loxdb("lox_rel_insert(loop)", rc, 1);
                 }
             }
             dt = now_us() - t0;
@@ -372,8 +372,8 @@ int main(int argc, char **argv) {
         } else {
             uint32_t id = rnd_next() % MODEL_REL_IDS;
             uint32_t deleted = 0u;
-            microdb_err_t rc = microdb_rel_delete(&g_db, t, &id, &deleted);
-            if (rc != MICRODB_OK) return fail_microdb("microdb_rel_delete(loop)", rc, 1);
+            lox_err_t rc = lox_rel_delete(&g_db, t, &id, &deleted);
+            if (rc != LOX_OK) return fail_loxdb("lox_rel_delete(loop)", rc, 1);
             if (model.rel_present[id] && deleted == 1u) {
                 model.rel_present[id] = 0;
                 model.rel_count--;
@@ -383,13 +383,13 @@ int main(int argc, char **argv) {
         }
 
         if (cfg.flush_every > 0u && (i % cfg.flush_every) == 0u) {
-            microdb_err_t rc = microdb_flush(&g_db);
-            if (rc != MICRODB_OK) return fail_microdb("microdb_flush(loop)", rc, 1);
+            lox_err_t rc = lox_flush(&g_db);
+            if (rc != LOX_OK) return fail_loxdb("lox_flush(loop)", rc, 1);
         }
         if (cfg.compact_every > 0u && (i % cfg.compact_every) == 0u) {
             uint64_t c0 = now_us();
-            microdb_err_t rc = microdb_compact(&g_db);
-            if (rc != MICRODB_OK) return fail_microdb("microdb_compact(loop)", rc, 1);
+            lox_err_t rc = lox_compact(&g_db);
+            if (rc != LOX_OK) return fail_loxdb("lox_compact(loop)", rc, 1);
             track_latency(now_us() - c0, &st.max_compact_us, &st);
         }
         if (cfg.reopen_every > 0u && (i % cfg.reopen_every) == 0u) {
@@ -465,10 +465,10 @@ int main(int argc, char **argv) {
     }
 
     {
-        microdb_err_t rc = microdb_deinit(&g_db);
-        if (rc != MICRODB_OK) return fail_microdb("microdb_deinit(final)", rc, 1);
+        lox_err_t rc = lox_deinit(&g_db);
+        if (rc != LOX_OK) return fail_loxdb("lox_deinit(final)", rc, 1);
     }
-    microdb_port_posix_deinit(&g_storage);
-    microdb_port_posix_remove(cfg.path);
+    lox_port_posix_deinit(&g_storage);
+    lox_port_posix_remove(cfg.path);
     return 0;
 }

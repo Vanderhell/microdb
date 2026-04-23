@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $stageRoot = Join-Path $root "dist"
-$packageName = "microdb-$Version-$Platform"
+$packageName = "loxdb-$Version-$Platform"
 $installDir = Join-Path $stageRoot $packageName
 $archivePath = Join-Path $stageRoot "$packageName.zip"
 $checksumPath = "$archivePath.sha256"

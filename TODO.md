@@ -45,8 +45,8 @@
    - export selected DB objects to portable payload
    - import with explicit validation and fail-code mapping
 4. [done] Robustness hardening landed:
-   - `microdb_json_wrapper` module (separate target, separate header)
-   - `microdb_import_export` module (separate target, separate header)
+   - `lox_json_wrapper` module (separate target, separate header)
+   - `lox_import_export` module (separate target, separate header)
    - TS/REL support added to import/export with explicit descriptors
    - dedicated tests: `test_json_wrapper`, `test_import_export`, `test_import_export_fuzz` (PASS)
    - strip gate: `test_optional_module_strip_gate` ensures module symbols do not leak into core
@@ -59,19 +59,19 @@
 
 ## Next Roadmap (Integration & Ecosystem Gaps)
 1. [done] Add `docs/BACKEND_INTEGRATION_GUIDE.md`:
-   - end-to-end backend-open flow (`descriptor -> decision -> adapter -> microdb_init`)
+   - end-to-end backend-open flow (`descriptor -> decision -> adapter -> lox_init`)
    - practical integration recipes for raw byte-write, aligned-write, and managed media
    - explicit "what stubs are / are not" section (capability descriptors, not drivers)
 2. [done] Improve documentation discoverability from top-level entry points:
    - add "Backend Integration" and "Migration" quick links in `README.md`
    - add docs map/navigation page linking backend contracts and stress/baseline docs
-   - make `port/esp32/microdb_port_esp32.c` explicitly discoverable as a reference implementation
+   - make `port/esp32/lox_port_esp32.c` explicitly discoverable as a reference implementation
    - mirror the same structure in GitHub Wiki sidebar/home
 3. [done] Add RTOS reference port skeletons:
-   - `examples/freertos_port/` minimal `microdb_storage_t` adapter scaffolding
-   - `examples/zephyr_port/` minimal `microdb_storage_t` adapter scaffolding
+   - `examples/freertos_port/` minimal `lox_storage_t` adapter scaffolding
+   - `examples/zephyr_port/` minimal `lox_storage_t` adapter scaffolding
    - document required sync/flush semantics and lock hooks (`cfg.lock_create/lock/unlock/lock_destroy`)
-   - include guidance from `src/microdb_lock.h` for single-thread vs thread-safe builds
+   - include guidance from `src/lox_lock.h` for single-thread vs thread-safe builds
 4. [done] Add reference "real driver glue" example for non-byte-write media:
    - aligned/block path example showing bounce-buffer + sync lifecycle
    - clearly separate demo glue code from production requirements
@@ -80,32 +80,32 @@
    - migration patterns (add/remove/reshape columns) and compatibility constraints
    - tested migration example with persisted data across reopen/recovery
 6. [done] Add `docs/PORT_AUTHORING_GUIDE.md` with annotated walkthrough:
-   - use `port/esp32/microdb_port_esp32.c` as live reference port
-   - explain field-by-field `microdb_storage_t` mapping to real driver hooks
+   - use `port/esp32/lox_port_esp32.c` as live reference port
+   - explain field-by-field `lox_storage_t` mapping to real driver hooks
    - call out `write_size = 1` core contract and when to use aligned adapter path
    - describe async erase/sync caveats and expected durability semantics
 
 ## New Findings (2026-04-20)
-1. [done] `microdb_rel_delete` durability edge case for multi-row delete:
+1. [done] `lox_rel_delete` durability edge case for multi-row delete:
    - verify power-loss window between in-memory delete progress and WAL append
    - confirm WAL guarantees for N-row delete with single `WAL_OP_DEL` record
    - add explicit durability test for partial-progress crash point (`wal_rel_delete_multirow_replayed_atomically`)
-2. [done] `microdb_rel_find` callback relock index staleness:
+2. [done] `lox_rel_find` callback relock index staleness:
    - `idx`/`index_count` may change after callback-unlock window
    - define and document iteration consistency semantics under concurrent mutation
    - fix implementation or document best-effort behavior explicitly
-3. [done] `microdb_ts_query` relock snapshot staleness:
+3. [done] `lox_ts_query` relock snapshot staleness:
    - `snapshot_tail`/`snapshot_count` and traversal index are not refreshed after relock
    - validate behavior under concurrent inserts during callback-unlock window
-   - align semantics with `microdb_ts_query_buf` or document divergence
-4. [done] `microdb_table_create` migration callback reentrancy risk:
+   - align semantics with `lox_ts_query_buf` or document divergence
+4. [done] `lox_table_create` migration callback reentrancy risk:
    - evaluate recursive migration scenarios (`on_migrate` calling table APIs)
    - add guard/detection or documented reentrancy contract
 5. [done] `schema_version` lifecycle ergonomics:
    - clarify and enforce when `schema_version` is read (pre-seal only)
    - prevent or warn on post-seal public-field mutation mismatch
-6. [done] `microdb_ts_downsample_oldest` RAW stream semantics:
-   - define merge policy for `MICRODB_TS_RAW` when overflow policy is downsample
+6. [done] `lox_ts_downsample_oldest` RAW stream semantics:
+   - define merge policy for `LOX_TS_RAW` when overflow policy is downsample
    - implement deterministic behavior or return explicit unsupported/fail path
 7. [done] `rel_find_free_row` performance improvement:
    - optimize alive bitmap scan from bit-by-bit to byte-level fast path
@@ -119,7 +119,7 @@
    - store per-bucket hash and check hash before `strncmp`
    - preserve existing key equality semantics
 3. [done] WAL append stack pressure reduction:
-   - remove `uint8_t entry[1552]` staging buffer in `microdb_append_wal_entry`
+   - remove `uint8_t entry[1552]` staging buffer in `lox_append_wal_entry`
    - write header/payload/padding directly to storage with same CRC format
 4. [done] REL free-row bit scan fast path:
    - replace inner 8-bit loop with `ctz`/lookup fast first-zero-bit resolution
@@ -143,8 +143,8 @@
    - reduce POSIX-only syscall artifact from scatter-write path (`writev` or small-buffer coalescing)
    - document that desktop POSIX benches are trend tools and not direct SPI-flash latency proxies
 9. [done] WAL conditional compilation for KV-only footprint:
-   - gate TS/REL snapshot functions in `src/microdb_wal.c` with engine flags (`MICRODB_ENABLE_TS`, `MICRODB_ENABLE_REL`)
-   - focus on `microdb_write_ts_page`, `microdb_load_ts_page`, `microdb_write_rel_page`, `microdb_load_rel_page`
-   - gate related callsites in snapshot/bootstrap flows (`microdb_write_snapshot_bank`, `microdb_storage_bootstrap`)
+   - gate TS/REL snapshot functions in `src/lox_wal.c` with engine flags (`LOX_ENABLE_TS`, `LOX_ENABLE_REL`)
+   - focus on `lox_write_ts_page`, `lox_load_ts_page`, `lox_write_rel_page`, `lox_load_rel_page`
+   - gate related callsites in snapshot/bootstrap flows (`lox_write_snapshot_bank`, `lox_storage_bootstrap`)
    - target lower retained WAL text size for KV+WAL builds under `--gc-sections`
    - keep snapshot/WAL format and recovery behavior unchanged for full-feature builds

@@ -1,8 +1,8 @@
-# microdb Product Brief
+# loxdb Product Brief
 
 ## One-line positioning
 
-microdb is a deterministic embedded storage core for MCU/edge systems with KV, TS, and REL APIs in a compact C99 surface.
+loxdb is a deterministic embedded storage core for MCU/edge systems with KV, TS, and REL APIs in a compact C99 surface.
 
 ## Target users
 

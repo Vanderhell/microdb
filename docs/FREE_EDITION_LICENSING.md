@@ -38,6 +38,6 @@ with explicit license boundaries and clear dependency lines.
 
 Recommended approach:
 
-1. Keep `microdb` core API open and stable.
+1. Keep `loxdb` core API open and stable.
 2. Publish premium add-ons as separate modules with separate license terms.
 3. Avoid mixing paid code into MIT core files.

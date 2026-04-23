@@ -1,4 +1,4 @@
 name=flip_payload_crc
 mutation=flip_payload_crc
-expect=MICRODB_OK_OR_CORRUPT
+expect=LOX_OK_OR_CORRUPT
 description=Flip REL page payload CRC word in active bank header.

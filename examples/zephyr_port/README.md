@@ -1,6 +1,6 @@
 # Zephyr Port Skeleton
 
-This folder is a template for integrating `microdb` on Zephyr-based targets.
+This folder is a template for integrating `loxdb` on Zephyr-based targets.
 
 File:
 
