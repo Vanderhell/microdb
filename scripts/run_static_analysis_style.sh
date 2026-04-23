@@ -11,8 +11,8 @@ cppcheck \
   --suppress=missingIncludeSystem \
   --suppress=unusedFunction \
   -I include -I src \
-  src/microdb.c src/microdb_kv.c src/microdb_ts.c \
-  src/microdb_rel.c src/microdb_wal.c src/microdb_crc.c \
+  src/loxdb.c src/lox_kv.c src/lox_ts.c \
+  src/lox_rel.c src/lox_wal.c src/lox_crc.c \
   2>&1 | tee "$REPORT_DIR/cppcheck_style_report.txt"
 
 STYLE_COUNT=$(grep -c ": style:" "$REPORT_DIR/cppcheck_style_report.txt" || true)
