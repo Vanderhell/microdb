@@ -60,6 +60,8 @@ static const char *kStoragePath = "/loxdb_stress_store.bin";
 static const uint32_t kStorageBytes = 128u * 1024u * 1024u;
 static const uint32_t kEraseSize = 4096u;
 static const uint32_t kReportEveryMs = 1000u;
+/* Bench default: start from clean DB image on every boot. */
+static const bool kFreshStartOnBoot = true;
 
 static lox_t g_db;
 static lox_storage_t g_storage;
@@ -139,12 +141,17 @@ static bool open_storage_file() {
   }
 
   if (!SD_MMC.exists(kStoragePath)) {
-    /* Fast pre-allocation for very large files: seek to final byte and write one marker byte. */
+    /* Deterministic media image: fill full DB region with erased pattern (0xFF). */
     File f = SD_MMC.open(kStoragePath, FILE_WRITE);
+    uint32_t off = 0u;
     if (!f) return false;
-    if (!f.seek(kStorageBytes - 1u) || f.write((uint8_t)0xFFu) != 1u) {
-      f.close();
-      return false;
+    while (off < kStorageBytes) {
+      size_t chunk = (size_t)((kStorageBytes - off) > kEraseSize ? kEraseSize : (kStorageBytes - off));
+      if (f.write(g_erase_buf, chunk) != chunk) {
+        f.close();
+        return false;
+      }
+      off += (uint32_t)chunk;
     }
     f.flush();
     f.close();
@@ -152,7 +159,19 @@ static bool open_storage_file() {
 
   g_store = SD_MMC.open(kStoragePath, "r+");
   if (!g_store) return false;
+  if ((uint32_t)g_store.size() != kStorageBytes) {
+    g_store.close();
+    return false;
+  }
   return true;
+}
+
+static bool recreate_storage_file() {
+  if (g_store) g_store.close();
+  if (SD_MMC.exists(kStoragePath)) {
+    if (!SD_MMC.remove(kStoragePath)) return false;
+  }
+  return open_storage_file();
 }
 
 static lox_err_t st_read(void *ctx, uint32_t off, void *buf, size_t len) {
@@ -279,6 +298,7 @@ static void lcd_status(uint8_t kv, uint8_t ts, uint8_t rel, uint8_t wal, uint8_t
 
 static bool init_db() {
   lox_cfg_t cfg;
+  lox_err_t rc;
   memset(&cfg, 0, sizeof(cfg));
   memset(&g_storage, 0, sizeof(g_storage));
 
@@ -300,12 +320,40 @@ static bool init_db() {
   cfg.wal_compact_threshold_pct = 75u;
   cfg.wal_sync_mode = LOX_WAL_SYNC_FLUSH_ONLY;
 
-  if (lox_init(&g_db, &cfg) != LOX_OK) return false;
-  if (lox_ts_register(&g_db, "stress_ts", LOX_TS_U32, 0u) != LOX_OK &&
-      lox_ts_register(&g_db, "stress_ts", LOX_TS_U32, 0u) != LOX_ERR_EXISTS) {
+  rc = lox_init(&g_db, &cfg);
+  if (rc == LOX_ERR_CORRUPT) {
+    Serial.println("[WARN] lox_init found corrupt image, recreating storage file");
+    (void)lox_deinit(&g_db);
+    if (g_store) g_store.close();
+    (void)SD_MMC.remove(kStoragePath);
+    if (!open_storage_file()) {
+      Serial.println("[ERR] recreate storage file failed");
+      return false;
+    }
+    rc = lox_init(&g_db, &cfg);
+  }
+  if (rc != LOX_OK) {
+    Serial.printf("[ERR] lox_init rc=%d cap=%lu erase=%lu write=%lu ram_kb=%u split=%u/%u/%u wal_th=%u\n",
+                  (int)rc,
+                  (unsigned long)g_storage.capacity,
+                  (unsigned long)g_storage.erase_size,
+                  (unsigned long)g_storage.write_size,
+                  (unsigned)cfg.ram_kb,
+                  (unsigned)cfg.kv_pct,
+                  (unsigned)cfg.ts_pct,
+                  (unsigned)cfg.rel_pct,
+                  (unsigned)cfg.wal_compact_threshold_pct);
     return false;
   }
-  if (!setup_rel()) return false;
+  rc = lox_ts_register(&g_db, "stress_ts", LOX_TS_U32, 0u);
+  if (!(rc == LOX_OK || rc == LOX_ERR_EXISTS)) {
+    Serial.printf("[ERR] lox_ts_register(stress_ts) rc=%d\n", (int)rc);
+    return false;
+  }
+  if (!setup_rel()) {
+    Serial.println("[ERR] setup_rel failed");
+    return false;
+  }
   return true;
 }
 
@@ -420,9 +468,13 @@ static void show_stats() {
 
 static void reset_db() {
   (void)lox_deinit(&g_db);
-  if (g_store) g_store.close();
-  SD_MMC.remove(kStoragePath);
-  if (!open_storage_file() || !init_db()) {
+  if (!recreate_storage_file()) {
+    Serial.println("[ERR] recreate storage file failed");
+    Serial.println("[ERR] reset failed");
+    return;
+  }
+  if (!init_db()) {
+    Serial.println("[ERR] init_db failed after remove");
     Serial.println("[ERR] reset failed");
     return;
   }
@@ -452,6 +504,13 @@ void setup() {
   if (!open_storage_file()) {
     Serial.println("[FATAL] SD storage file open failed");
     return;
+  }
+  if (kFreshStartOnBoot) {
+    if (!recreate_storage_file()) {
+      Serial.println("[FATAL] fresh-start recreate failed");
+      return;
+    }
+    Serial.println("[OK] fresh-start storage image created");
   }
   if (!init_db()) {
     Serial.println("[FATAL] lox_init failed");

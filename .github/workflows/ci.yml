@@ -7,6 +7,14 @@ on:
     branches: [ master, main ]
 
 jobs:
+  boundary-check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Boundary Rules Check
+        shell: pwsh
+        run: ./tools/check_boundary_rules.ps1
+
   spdx-check:
     runs-on: windows-latest
     steps:
