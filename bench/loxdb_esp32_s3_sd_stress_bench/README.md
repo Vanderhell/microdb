@@ -31,22 +31,29 @@ Pin map is aligned to your `esp32_s3_sd_storage_smoketest` setup.
 ## Runtime model
 
 - persistent storage file on SD: `/loxdb_stress_store.bin`
-- storage size: `16 MiB`
+- storage size: `128 MiB`
 - erase size: `4096`
 - write size: `1`
 - loxdb RAM budget: `2048 KB` (uses OPI PSRAM when available)
 - engine split: `KV 34% / TS 33% / REL 33%`
 - WAL mode: `LOX_WAL_SYNC_FLUSH_ONLY` for higher ingest throughput
 
+## Write modes
+
+- `all` (default): mixed KV/TS/REL writes
+- `kv`: KV-only write simulation
+- `ts`: TS-only write simulation
+- `rel`: REL-only write simulation
+
+On storage pressure (`LOX_ERR_STORAGE`/`LOX_ERR_FULL`) bench triggers `lox_compact()` and continues.
+
 ## What runs continuously
 
-Main loop randomly mixes:
+Depending on selected mode:
 
 - KV writes (`lox_kv_put`)
 - TS inserts (`lox_ts_insert`)
 - REL inserts (`lox_rel_insert`)
-
-On storage pressure (`LOX_ERR_STORAGE`/`LOX_ERR_FULL`) it triggers `lox_compact()` and continues.
 
 ## LCD output
 
@@ -64,6 +71,8 @@ Updated every second:
 
 - `run` / `resume` -> continue stress loop
 - `pause` -> pause writes
+- `mode all|kv|ts|rel` -> switch write mode
+- `clear kv|ts|rel|all` -> clear selected engine data
 - `compact` -> force compact
 - `stats` -> print pressure snapshot
 - `resetdb` -> delete storage file and recreate database

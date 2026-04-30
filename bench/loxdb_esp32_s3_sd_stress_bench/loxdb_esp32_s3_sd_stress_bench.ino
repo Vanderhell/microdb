@@ -56,8 +56,8 @@ extern "C" {
 #endif
 
 static const char *kStoragePath = "/loxdb_stress_store.bin";
-/* ~4GB logical storage window (4000 MiB) while staying within uint32_t range. */
-static const uint32_t kStorageBytes = 4000u * 1024u * 1024u;
+/* Stable large-window mode for endurance on ESP32-S3 + PSRAM. */
+static const uint32_t kStorageBytes = 128u * 1024u * 1024u;
 static const uint32_t kEraseSize = 4096u;
 static const uint32_t kReportEveryMs = 1000u;
 
@@ -74,6 +74,13 @@ static uint32_t g_ts = 0u;
 static uint32_t g_rel_next_id = 1u;
 static lox_table_t *g_rel = NULL;
 static uint8_t g_lcd_page = 0u;
+typedef enum {
+  MODE_ALL = 0,
+  MODE_KV,
+  MODE_TS,
+  MODE_REL
+} stress_mode_t;
+static stress_mode_t g_mode = MODE_ALL;
 
 #if SDSTRESS_LCD_ENABLE
 static Adafruit_ST7735 g_tft(LCD_PIN_CS, LCD_PIN_DC, LCD_PIN_RST);
@@ -84,6 +91,15 @@ static uint32_t rng_next(void) {
   static uint32_t s = 0x1234ABCDu;
   s = s * 1664525u + 1013904223u;
   return s;
+}
+
+static const char *mode_name(stress_mode_t m) {
+  switch (m) {
+    case MODE_KV: return "kv";
+    case MODE_TS: return "ts";
+    case MODE_REL: return "rel";
+    default: return "all";
+  }
 }
 
 static void log_line(const char *msg) {
@@ -219,7 +235,7 @@ static void lcd_status_page0(uint8_t kv, uint8_t ts, uint8_t rel, uint8_t wal, u
   g_tft.println("loxdb SD stress");
   g_tft.setTextColor(ST77XX_WHITE);
   g_tft.setCursor(2, 18);
-  g_tft.printf("ops: %lu", (unsigned long)g_ops);
+  g_tft.printf("ops:%lu m:%s", (unsigned long)g_ops, mode_name(g_mode));
   g_tft.setCursor(2, 32);
   g_tft.printf("KV : %3u%%", (unsigned)kv);
   g_tft.setCursor(2, 44);
@@ -295,6 +311,9 @@ static bool init_db() {
 
 static void do_one_op() {
   uint32_t r = rng_next() % 3u;
+  if (g_mode == MODE_KV) r = 0u;
+  else if (g_mode == MODE_TS) r = 1u;
+  else if (g_mode == MODE_REL) r = 2u;
   lox_err_t rc;
   if (r == 0u) {
     char key[24];
@@ -330,7 +349,54 @@ static void do_one_op() {
 }
 
 static void print_usage() {
-  Serial.println("Commands: run | pause | resume | compact | stats | resetdb");
+  Serial.println("Commands:");
+  Serial.println("  run | pause | resume");
+  Serial.println("  mode all|kv|ts|rel");
+  Serial.println("  clear kv|ts|rel|all");
+  Serial.println("  compact | stats | resetdb");
+}
+
+static void set_mode_from_text(const String &arg) {
+  if (arg == "all") g_mode = MODE_ALL;
+  else if (arg == "kv") g_mode = MODE_KV;
+  else if (arg == "ts") g_mode = MODE_TS;
+  else if (arg == "rel") g_mode = MODE_REL;
+  else {
+    Serial.println("[ERR] mode must be all|kv|ts|rel");
+    return;
+  }
+  Serial.printf("[OK] mode=%s\n", mode_name(g_mode));
+}
+
+static void clear_engine(const String &arg) {
+  lox_err_t rc = LOX_ERR_INVALID;
+  if (arg == "kv") {
+    rc = lox_kv_clear(&g_db);
+  } else if (arg == "ts") {
+    rc = lox_ts_clear(&g_db, "stress_ts");
+    if (rc == LOX_OK) g_ts = 0u;
+  } else if (arg == "rel") {
+    rc = (g_rel != NULL) ? lox_rel_clear(&g_db, g_rel) : LOX_ERR_INVALID;
+    if (rc == LOX_OK) g_rel_next_id = 1u;
+  } else if (arg == "all") {
+    lox_err_t a = lox_kv_clear(&g_db);
+    lox_err_t b = lox_ts_clear(&g_db, "stress_ts");
+    lox_err_t c = (g_rel != NULL) ? lox_rel_clear(&g_db, g_rel) : LOX_ERR_INVALID;
+    if (a == LOX_OK && b == LOX_OK && c == LOX_OK) {
+      g_ts = 0u;
+      g_rel_next_id = 1u;
+      Serial.println("[OK] clear all");
+      return;
+    }
+    Serial.printf("[ERR] clear all kv=%d ts=%d rel=%d\n", (int)a, (int)b, (int)c);
+    return;
+  } else {
+    Serial.println("[ERR] clear must be kv|ts|rel|all");
+    return;
+  }
+
+  if (rc == LOX_OK) Serial.printf("[OK] clear %s\n", arg.c_str());
+  else Serial.printf("[ERR] clear %s rc=%d\n", arg.c_str(), (int)rc);
 }
 
 static void show_stats() {
@@ -408,6 +474,8 @@ void loop() {
     if (c == '\n') {
       if (cmd == "run" || cmd == "resume") g_running = true;
       else if (cmd == "pause") g_running = false;
+      else if (cmd.startsWith("mode ")) set_mode_from_text(cmd.substring(5));
+      else if (cmd.startsWith("clear ")) clear_engine(cmd.substring(6));
       else if (cmd == "compact") (void)lox_compact(&g_db);
       else if (cmd == "stats") show_stats();
       else if (cmd == "resetdb") reset_db();
