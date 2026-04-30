@@ -56,7 +56,8 @@ extern "C" {
 #endif
 
 static const char *kStoragePath = "/loxdb_stress_store.bin";
-static const uint32_t kStorageBytes = 16u * 1024u * 1024u;
+/* ~4GB logical storage window (4000 MiB) while staying within uint32_t range. */
+static const uint32_t kStorageBytes = 4000u * 1024u * 1024u;
 static const uint32_t kEraseSize = 4096u;
 static const uint32_t kReportEveryMs = 1000u;
 
@@ -122,18 +123,12 @@ static bool open_storage_file() {
   }
 
   if (!SD_MMC.exists(kStoragePath)) {
+    /* Fast pre-allocation for very large files: seek to final byte and write one marker byte. */
     File f = SD_MMC.open(kStoragePath, FILE_WRITE);
     if (!f) return false;
-    static uint8_t zero[1024];
-    memset(zero, 0xFF, sizeof(zero));
-    uint32_t written = 0u;
-    while (written < kStorageBytes) {
-      uint32_t n = (kStorageBytes - written > sizeof(zero)) ? sizeof(zero) : (kStorageBytes - written);
-      if (f.write(zero, n) != n) {
-        f.close();
-        return false;
-      }
-      written += n;
+    if (!f.seek(kStorageBytes - 1u) || f.write((uint8_t)0xFFu) != 1u) {
+      f.close();
+      return false;
     }
     f.flush();
     f.close();
