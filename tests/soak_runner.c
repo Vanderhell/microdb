@@ -430,11 +430,17 @@ int main(int argc, char **argv) {
                 if (rc == LOX_OK) {
                     model.rel_present[id] = 1;
                     model.rel_count++;
-                } else if (rc == LOX_ERR_FULL || rc == LOX_ERR_STORAGE) {
-                    if (!handle_backpressure()) return 1;
-                    continue;
                 } else {
-                    return fail_loxdb("lox_rel_insert(loop)", rc, 1);
+                    if (!handle_backpressure()) return 1;
+                    rc = lox_rel_insert(&g_db, t, row);
+                    if (rc == LOX_OK) {
+                        model.rel_present[id] = 1;
+                        model.rel_count++;
+                    } else if (rc == LOX_ERR_FULL || rc == LOX_ERR_STORAGE) {
+                        continue;
+                    } else {
+                        return fail_loxdb("lox_rel_insert(loop)", rc, 1);
+                    }
                 }
             }
             dt = now_us() - t0;
