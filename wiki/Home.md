@@ -28,5 +28,5 @@ It combines three engines behind one API:
 
 ## Repository
 
-- Source: `https://github.com/<org>/loxdb`
-- README: `README.md`
+- Source: `https://github.com/Vanderhell/loxdb`
+- README: `https://github.com/Vanderhell/loxdb#readme`
