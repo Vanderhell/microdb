@@ -1,4 +1,5 @@
 build/
+build_loxdb_sync/
 build_bench_*/
 build_fix/
 build_verify/
@@ -10,6 +11,9 @@ soak_*.bin
 soak_runner.bin
 worstcase_matrix.bin
 docs/results/benchdb_*.bin
+docs/results/soak_*.csv
+docs/results/worstcase_matrix_*.csv
+docs/results/validation_summary_*.md
 bench/loxdb_esp32_s3_bench_base/build_sync_flush_only/
 bench/loxdb_esp32_s3_bench_head/build_sync_flush_only/
 bench/loxdb_esp32_s3_bench_base/build_n16r8/
