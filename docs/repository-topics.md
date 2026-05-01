@@ -1,6 +1,6 @@
 # Recommended Repository Topics
 
-Suggested GitHub repository topics for `Vanderhell/loxdb`:
+Suggested GitHub repository topics for `<org>/loxdb`:
 
 - `c`
 - `c99`

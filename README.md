@@ -1,4 +1,4 @@
-﻿![loxdb](docs/banner.svg)
+![loxdb](docs/banner.svg)
 
 # loxdb
 
@@ -6,13 +6,13 @@
 > Three engines. One malloc. Zero dependencies.
 > Deterministic durable storage core for MCU/embedded systems.
 
-[![CI](https://github.com/Vanderhell/loxdb/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanderhell/loxdb/actions/workflows/ci.yml)
+[![CI](https://github.com/<org>/loxdb/actions/workflows/ci.yml/badge.svg)](https://github.com/<org>/loxdb/actions/workflows/ci.yml)
 [![Language: C99](https://img.shields.io/badge/language-C99-blue)](https://en.wikipedia.org/wiki/C99)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Platform: MCU | Linux | Windows | macOS](https://img.shields.io/badge/platform-MCU%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS-informational)](https://github.com/Vanderhell/loxdb)
-[![Tests](https://img.shields.io/badge/tests-ctest-brightgreen)](https://github.com/Vanderhell/loxdb/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Vanderhell/loxdb)](https://github.com/Vanderhell/loxdb/releases)
-[![Wiki](https://img.shields.io/badge/docs-wiki-blue)](https://github.com/Vanderhell/loxdb/wiki)
+[![Platform: MCU | Linux | Windows | macOS](https://img.shields.io/badge/platform-MCU%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS-informational)](https://github.com/<org>/loxdb)
+[![Tests](https://img.shields.io/badge/tests-ctest-brightgreen)](https://github.com/<org>/loxdb/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/<org>/loxdb)](https://github.com/<org>/loxdb/releases)
+[![Wiki](https://img.shields.io/badge/docs-wiki-blue)](wiki/)
 [![Contributing](https://img.shields.io/badge/contributions-welcome-success)](CONTRIBUTING.md)
 [![Security](https://img.shields.io/badge/security-policy-important)](SECURITY.md)
 
@@ -63,6 +63,7 @@ and can operate either in RAM-only mode or with a storage HAL for persistence an
 - Schema migration guide: see [SCHEMA_MIGRATION_GUIDE.md](docs/SCHEMA_MIGRATION_GUIDE.md)
 - Full docs map: see [DOCS_MAP.md](docs/DOCS_MAP.md)
 - Core/PRO docs sync plan: see [DOCS_SYNC_PLAN.md](docs/DOCS_SYNC_PLAN.md)
+- Public `loxdb_pro` documentation repository: `loxdb_pro_docs`
 - Change cycle checklist: see [CHANGE_CYCLE_CHECKLIST.md](docs/CHANGE_CYCLE_CHECKLIST.md)
 - Release checklist: see [RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
 - Release tag template: see [RELEASE_TAG_TEMPLATE.md](docs/RELEASE_TAG_TEMPLATE.md)

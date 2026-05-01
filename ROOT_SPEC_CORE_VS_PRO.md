@@ -1,7 +1,7 @@
-﻿# LoxDB Core Specification: Boundary with LoxDB PRO, Non-Duplication, and Improvement Plan
+# LoxDB Core Specification: Boundary with LoxDB PRO, Non-Duplication, and Improvement Plan
 
 Date: 2026-05-01
-Repository: C:\Users\vande\Desktop\loxdb
+Repository: loxdb
 
 ## 1) Executive Summary
 
