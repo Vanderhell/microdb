@@ -1,4 +1,4 @@
-![loxdb](docs/banner.svg)
+﻿![loxdb](docs/banner.svg)
 
 # loxdb
 
@@ -52,11 +52,18 @@ and can operate either in RAM-only mode or with a storage HAL for persistence an
 - Latest hard verdict (currently 2026-04-19): see [hard_verdict_20260419.md](docs/results/hard_verdict_20260419.md)
 - Full validation artifacts and trend dashboard: see [docs/results/](docs/results/) and [trend_dashboard.md](docs/results/trend_dashboard.md)
 - Getting started (5 min): see [GETTING_STARTED_5_MIN.md](docs/GETTING_STARTED_5_MIN.md)
+- Developer quickstart (10 min): see [GETTING_STARTED_DEV_10_MIN.md](docs/GETTING_STARTED_DEV_10_MIN.md)
+- Limits and failures contract: see [LIMITS_AND_FAILURES.md](docs/LIMITS_AND_FAILURES.md)
+- Startup decision flow: see [STARTUP_DECISION_FLOW.md](docs/STARTUP_DECISION_FLOW.md)
+- Troubleshooting guide: see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- Golden hardware profiles: see [GOLDEN_PROFILES.md](docs/GOLDEN_PROFILES.md)
 - Programmer manual: see [PROGRAMMER_MANUAL.md](docs/PROGRAMMER_MANUAL.md)
 - Backend integration guide: see [BACKEND_INTEGRATION_GUIDE.md](docs/BACKEND_INTEGRATION_GUIDE.md)
 - Port authoring guide (ESP32 reference): see [PORT_AUTHORING_GUIDE.md](docs/PORT_AUTHORING_GUIDE.md)
 - Schema migration guide: see [SCHEMA_MIGRATION_GUIDE.md](docs/SCHEMA_MIGRATION_GUIDE.md)
 - Full docs map: see [DOCS_MAP.md](docs/DOCS_MAP.md)
+- Core/PRO docs sync plan: see [DOCS_SYNC_PLAN.md](docs/DOCS_SYNC_PLAN.md)
+- Change cycle checklist: see [CHANGE_CYCLE_CHECKLIST.md](docs/CHANGE_CYCLE_CHECKLIST.md)
 - Release checklist: see [RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
 - Release tag template: see [RELEASE_TAG_TEMPLATE.md](docs/RELEASE_TAG_TEMPLATE.md)
 
@@ -111,6 +118,7 @@ Header:
 
 Current wrapper surface:
 - lifecycle: `init/deinit/flush`
+- startup gating: `preflight`
 - diagnostics: `stats`, `db_stats`, `kv_stats`, `ts_stats`, `rel_stats`, `effective_capacity`, `pressure`
 - KV: `kv_set/kv_put/kv_get/kv_del/kv_exists/kv_iter/kv_clear/kv_purge_expired`, `admit_kv_set`
 - TS: `ts_register/ts_insert/ts_last/ts_query/ts_query_buf/ts_count/ts_clear`, `admit_ts_insert`
@@ -135,6 +143,18 @@ db.kv_put("k2", &v, 1u);
 db.txn_commit();
 
 db.deinit();
+```
+
+Preflight before init:
+```cpp
+#include "lox_cpp.hpp"
+
+lox_cfg_t cfg{};
+cfg.ram_kb = 64u;
+lox_preflight_report_t rep{};
+if (loxdb::cpp::preflight(cfg, &rep) != LOX_OK) {
+    // use rep.status + sizing fields to pick fallback profile
+}
 ```
 
 ## Optional wrappers and adapter modules
@@ -358,3 +378,5 @@ License details and file-level SPDX policy:
 - SPDX tooling:
   - `tools/apply_spdx_headers.ps1`
   - `tools/check_spdx_headers.ps1`
+
+

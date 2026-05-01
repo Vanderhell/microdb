@@ -454,6 +454,28 @@ typedef struct {
 } lox_cfg_t;
 
 typedef struct {
+    lox_err_t status;
+    uint32_t ram_kb;
+    uint8_t kv_pct;
+    uint8_t ts_pct;
+    uint8_t rel_pct;
+    uint32_t heap_total_bytes;
+    uint32_t kv_arena_bytes;
+    uint32_t ts_arena_bytes;
+    uint32_t rel_arena_bytes;
+    uint32_t wal_enabled;
+    uint32_t storage_required_bytes;
+    uint32_t storage_capacity_bytes;
+    uint32_t storage_erase_size;
+    uint32_t storage_write_size;
+    uint32_t wal_size;
+    uint32_t bank_size;
+    uint32_t kv_snapshot_bytes;
+    uint32_t ts_snapshot_bytes;
+    uint32_t rel_snapshot_bytes;
+} lox_preflight_report_t;
+
+typedef struct {
     lox_timestamp_t ts;
     union {
         float f32;
@@ -480,6 +502,7 @@ typedef struct {
 } lox_ts_log_retain_cfg_t;
 
 lox_err_t lox_init(lox_t *db, const lox_cfg_t *cfg);
+lox_err_t lox_preflight(const lox_cfg_t *cfg, lox_preflight_report_t *out);
 lox_err_t lox_deinit(lox_t *db);
 lox_err_t lox_flush(lox_t *db);
 lox_err_t lox_stats(const lox_t *db, lox_stats_t *out);

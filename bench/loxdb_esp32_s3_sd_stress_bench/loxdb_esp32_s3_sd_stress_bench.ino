@@ -71,7 +71,7 @@ extern "C" {
 
 static const char *kStoragePath = "/loxdb_stress_store.bin";
 /* Stable large-window mode for endurance on ESP32-S3 + PSRAM. */
-static const uint32_t kStorageBytes = 128u * 1024u * 1024u;
+static const uint32_t kStorageBytes = 64u * 1024u * 1024u;
 static const uint32_t kEraseSize = 4096u;
 static const uint32_t kReportEveryMs = 1000u;
 /* Bench default: start from clean DB image on every boot. */
@@ -89,7 +89,7 @@ static uint8_t *g_erase_buf = NULL;
 static uint32_t g_ops = 0u;
 static uint32_t g_ts_seq[8] = {0};
 static uint32_t g_rel_next_id = 1u;
-static lox_table_t *g_rel_tables[6] = {0};
+static lox_table_t *g_rel_tables[4] = {0};
 static uint8_t g_ts_rr = 0u;
 static uint8_t g_rel_rr = 0u;
 static uint8_t g_kv_rr = 0u;
@@ -119,12 +119,14 @@ static const char *kTsStreams[] = {
   "stress_ts_4", "stress_ts_5", "stress_ts_6", "stress_ts_7"
 };
 static const char *kRelNames[] = {
-  "stress_rel_0", "stress_rel_1", "stress_rel_2",
-  "stress_rel_3", "stress_rel_4", "stress_rel_5"
+  "stress_rel_0", "stress_rel_1", "stress_rel_2", "stress_rel_3"
 };
 static const uint32_t kTsStreamCount = (uint32_t)(sizeof(kTsStreams) / sizeof(kTsStreams[0]));
 static const uint32_t kRelTableCount = (uint32_t)(sizeof(kRelNames) / sizeof(kRelNames[0]));
 static const uint32_t kKvKeySpace = 20000u;
+/* 128MiB profile: start high, then downscale per-table on FULL/NO_MEM. */
+static const uint32_t kRelMaxRows = 4096u;
+static const uint32_t kRelMinRows = 64u;
 
 #if SDSTRESS_LCD_ENABLE
 static Adafruit_ST7735 g_tft(LCD_PIN_CS, LCD_PIN_DC, LCD_PIN_RST);
@@ -259,33 +261,77 @@ static lox_err_t st_sync(void *ctx) {
 static bool setup_rel_table(uint32_t idx, const char *name) {
   lox_schema_t s;
   lox_err_t rc;
+  uint32_t rows_try = kRelMaxRows;
   lox_table_t *tmp = NULL;
   rc = lox_table_get(&g_db, name, &tmp);
   if (rc == LOX_OK) return true;
   if (rc != LOX_ERR_NOT_FOUND) return false;
 
-  rc = lox_schema_init(&s, name, 32768u);
-  if (rc != LOX_OK) return false;
-  rc = lox_schema_add(&s, "id", LOX_COL_U32, sizeof(uint32_t), true);
-  if (rc != LOX_OK) return false;
-  rc = lox_schema_add(&s, "v", LOX_COL_U32, sizeof(uint32_t), false);
-  if (rc != LOX_OK) return false;
-  if (idx % 2u == 0u) {
-    rc = lox_schema_add(&s, "temp", LOX_COL_I32, sizeof(int32_t), false);
-    if (rc != LOX_OK) return false;
-  } else {
-    rc = lox_schema_add(&s, "flags", LOX_COL_U16, sizeof(uint16_t), false);
-    if (rc != LOX_OK) return false;
+  while (rows_try >= kRelMinRows) {
+    rc = lox_schema_init(&s, name, rows_try);
+    if (rc != LOX_OK) {
+      Serial.printf("[ERR] lox_schema_init(%s,%lu) rc=%d\n", name, (unsigned long)rows_try, (int)rc);
+      return false;
+    }
+    rc = lox_schema_add(&s, "id", LOX_COL_U32, sizeof(uint32_t), true);
+    if (rc != LOX_OK) {
+      Serial.printf("[ERR] lox_schema_add(id) table=%s rc=%d\n", name, (int)rc);
+      return false;
+    }
+    rc = lox_schema_add(&s, "v", LOX_COL_U32, sizeof(uint32_t), false);
+    if (rc != LOX_OK) {
+      Serial.printf("[ERR] lox_schema_add(v) table=%s rc=%d\n", name, (int)rc);
+      return false;
+    }
+    if (idx % 2u == 0u) {
+      rc = lox_schema_add(&s, "temp", LOX_COL_I32, sizeof(int32_t), false);
+      if (rc != LOX_OK) {
+        Serial.printf("[ERR] lox_schema_add(temp) table=%s rc=%d\n", name, (int)rc);
+        return false;
+      }
+    } else {
+      rc = lox_schema_add(&s, "flags", LOX_COL_U16, sizeof(uint16_t), false);
+      if (rc != LOX_OK) {
+        Serial.printf("[ERR] lox_schema_add(flags) table=%s rc=%d\n", name, (int)rc);
+        return false;
+      }
+    }
+    if (idx % 3u == 0u) {
+      rc = lox_schema_add(&s, "ts", LOX_COL_U64, sizeof(uint64_t), false);
+      if (rc != LOX_OK) {
+        Serial.printf("[ERR] lox_schema_add(ts) table=%s rc=%d\n", name, (int)rc);
+        return false;
+      }
+    }
+    rc = lox_schema_seal(&s);
+    if (rc != LOX_OK) {
+      Serial.printf("[ERR] lox_schema_seal(%s) rc=%d\n", name, (int)rc);
+      return false;
+    }
+    rc = lox_table_create(&g_db, &s);
+    if (rc == LOX_OK || rc == LOX_ERR_EXISTS) {
+      if (rows_try != kRelMaxRows) {
+        Serial.printf("[WARN] table %s max_rows reduced to %lu\n", name, (unsigned long)rows_try);
+      }
+      break;
+    }
+    if (rc != LOX_ERR_FULL && rc != LOX_ERR_NO_MEM) {
+      Serial.printf("[ERR] lox_table_create(%s) rc=%d\n", name, (int)rc);
+      return false;
+    }
+    Serial.printf("[WARN] lox_table_create(%s) rc=%d at rows=%lu, retry smaller\n",
+                  name, (int)rc, (unsigned long)rows_try);
+    rows_try /= 2u;
   }
-  if (idx % 3u == 0u) {
-    rc = lox_schema_add(&s, "ts", LOX_COL_U64, sizeof(uint64_t), false);
-    if (rc != LOX_OK) return false;
+  if (rc != LOX_OK && rc != LOX_ERR_EXISTS) {
+    Serial.printf("[ERR] lox_table_create(%s) exhausted retries down to min_rows=%lu\n",
+                  name, (unsigned long)kRelMinRows);
+    return false;
   }
-  rc = lox_schema_seal(&s);
-  if (rc != LOX_OK) return false;
-  rc = lox_table_create(&g_db, &s);
-  if (rc != LOX_OK && rc != LOX_ERR_EXISTS) return false;
   rc = lox_table_get(&g_db, name, &tmp);
+  if (rc != LOX_OK) {
+    Serial.printf("[ERR] lox_table_get(%s) rc=%d\n", name, (int)rc);
+  }
   return rc == LOX_OK;
 }
 
@@ -384,7 +430,7 @@ static bool init_db() {
   g_storage.ctx = NULL;
 
   cfg.storage = &g_storage;
-  cfg.ram_kb = 4096u;
+  cfg.ram_kb = 8192u;
   cfg.kv_pct = 45u;
   cfg.ts_pct = 20u;
   cfg.rel_pct = 35u;
@@ -393,8 +439,8 @@ static bool init_db() {
   cfg.wal_sync_mode = LOX_WAL_SYNC_FLUSH_ONLY;
 
   rc = lox_init(&g_db, &cfg);
-  if (rc == LOX_ERR_CORRUPT) {
-    Serial.println("[WARN] lox_init found corrupt image, recreating storage file");
+  if (rc == LOX_ERR_CORRUPT || rc == LOX_ERR_EXISTS || rc == LOX_ERR_SCHEMA) {
+    Serial.printf("[WARN] lox_init rc=%d (%s), recreating storage file\n", (int)rc, lox_err_to_string(rc));
     (void)lox_deinit(&g_db);
     if (g_store) g_store.close();
     (void)SD_MMC.remove(kStoragePath);

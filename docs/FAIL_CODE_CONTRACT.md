@@ -8,6 +8,14 @@ This document defines the external error semantics for `loxdb` public API.
 - The function always returns a non-null string.
 - Unknown numeric values map to `LOX_ERR_UNKNOWN`.
 
+## Preflight API
+
+- `lox_preflight(...)` returns the same external `lox_err_t` contract family used by `lox_init`.
+- Intended use:
+  - run before init,
+  - block invalid/infeasible startup combinations early,
+  - log deterministic reason + sizing context from `lox_preflight_report_t`.
+
 ## Core Error Codes
 
 - `LOX_ERR_INVALID`

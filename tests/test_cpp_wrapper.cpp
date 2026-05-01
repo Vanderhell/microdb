@@ -66,6 +66,30 @@ MDB_TEST(cpp_wrapper_reports_invalid_before_init) {
     ASSERT_EQ(db.stats(&stats), LOX_ERR_INVALID);
 }
 
+MDB_TEST(cpp_wrapper_preflight_ram_only_ok) {
+    lox_cfg_t cfg;
+    lox_preflight_report_t rep;
+    std::memset(&cfg, 0, sizeof(cfg));
+    std::memset(&rep, 0, sizeof(rep));
+    cfg.ram_kb = 64u;
+    ASSERT_EQ(loxdb::cpp::preflight(cfg, &rep), LOX_OK);
+    ASSERT_EQ(rep.status, LOX_OK);
+    ASSERT_EQ(rep.ram_kb, 64u);
+    ASSERT_GT(rep.kv_arena_bytes, 0u);
+}
+
+MDB_TEST(cpp_wrapper_preflight_invalid_split) {
+    lox_cfg_t cfg;
+    lox_preflight_report_t rep;
+    std::memset(&cfg, 0, sizeof(cfg));
+    std::memset(&rep, 0, sizeof(rep));
+    cfg.ram_kb = 64u;
+    cfg.kv_pct = 40u;
+    cfg.ts_pct = 40u;
+    cfg.rel_pct = 30u;
+    ASSERT_EQ(loxdb::cpp::Database::preflight(cfg, &rep), LOX_ERR_INVALID);
+}
+
 MDB_TEST(cpp_wrapper_init_and_stats) {
     lox_stats_t stats;
 #ifdef LOX_CAP_LIMIT_NONE
@@ -419,6 +443,8 @@ MDB_TEST(cpp_wrapper_realdata_typed_flow) {
 }
 
 int main(void) {
+    MDB_RUN_TEST(setup_noop, teardown_db, cpp_wrapper_preflight_ram_only_ok);
+    MDB_RUN_TEST(setup_noop, teardown_db, cpp_wrapper_preflight_invalid_split);
     MDB_RUN_TEST(setup_noop, teardown_db, cpp_wrapper_txn_reports_invalid_before_init);
     MDB_RUN_TEST(setup_noop, teardown_db, cpp_wrapper_reports_invalid_before_init);
     MDB_RUN_TEST(setup_db, teardown_db, cpp_wrapper_init_and_stats);

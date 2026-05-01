@@ -46,6 +46,18 @@ static void lox_selfcheck_set_first(lox_selfcheck_result_t *out, const char *msg
     }
 }
 
+static uint32_t lox_align_u32_local(uint32_t value, uint32_t align) {
+    return (value + (align - 1u)) & ~(align - 1u);
+}
+
+static uint32_t lox_kv_snapshot_payload_max_local(void) {
+    uint32_t max_entries;
+    uint32_t max_key_len = (LOX_KV_KEY_MAX_LEN > 0u) ? (LOX_KV_KEY_MAX_LEN - 1u) : 0u;
+    uint32_t per_entry = 1u + max_key_len + 4u + LOX_KV_VAL_MAX_LEN + 4u;
+    max_entries = (LOX_KV_MAX_KEYS > LOX_TXN_STAGE_KEYS) ? (LOX_KV_MAX_KEYS - LOX_TXN_STAGE_KEYS) : 0u;
+    return max_entries * per_entry;
+}
+
 const char *lox_err_to_string(lox_err_t err) {
     switch (err) {
         case LOX_OK:
@@ -81,6 +93,156 @@ const char *lox_err_to_string(lox_err_t err) {
         default:
             return "LOX_ERR_UNKNOWN";
     }
+}
+
+lox_err_t lox_preflight(const lox_cfg_t *cfg, lox_preflight_report_t *out) {
+    uint32_t ram_kb;
+    uint8_t kv_pct;
+    uint8_t ts_pct;
+    uint8_t rel_pct;
+    bool custom_split;
+    size_t total_bytes;
+    size_t kv_bytes;
+    size_t ts_bytes;
+    size_t ts_base;
+    size_t ts_end;
+    size_t rel_base;
+
+    if (out == NULL) {
+        return LOX_ERR_INVALID;
+    }
+    memset(out, 0, sizeof(*out));
+    out->status = LOX_ERR_INVALID;
+    if (cfg == NULL) {
+        return LOX_ERR_INVALID;
+    }
+
+    ram_kb = cfg->ram_kb != 0u ? cfg->ram_kb : LOX_RAM_KB;
+    custom_split = (cfg->kv_pct != 0u) || (cfg->ts_pct != 0u) || (cfg->rel_pct != 0u);
+    if (custom_split) {
+        if (cfg->kv_pct == 0u || cfg->ts_pct == 0u || cfg->rel_pct == 0u) {
+            return LOX_ERR_INVALID;
+        }
+        kv_pct = cfg->kv_pct;
+        ts_pct = cfg->ts_pct;
+        rel_pct = cfg->rel_pct;
+    } else {
+        kv_pct = (uint8_t)LOX_RAM_KV_PCT;
+        ts_pct = (uint8_t)LOX_RAM_TS_PCT;
+        rel_pct = (uint8_t)LOX_RAM_REL_PCT;
+    }
+    if ((uint32_t)kv_pct + (uint32_t)ts_pct + (uint32_t)rel_pct != 100u) {
+        return LOX_ERR_INVALID;
+    }
+    if (cfg->wal_compact_auto != 0u &&
+        (cfg->wal_compact_threshold_pct == 0u || cfg->wal_compact_threshold_pct > 100u)) {
+        return LOX_ERR_INVALID;
+    }
+    if (cfg->wal_sync_mode > LOX_WAL_SYNC_FLUSH_ONLY) {
+        return LOX_ERR_INVALID;
+    }
+
+    total_bytes = lox_bytes_from_kb(ram_kb);
+    kv_bytes = lox_slice_bytes(total_bytes, kv_pct);
+    ts_bytes = lox_slice_bytes(total_bytes, ts_pct);
+    ts_base = ((kv_bytes + sizeof(uint32_t) - 1u) / sizeof(uint32_t)) * sizeof(uint32_t);
+    if (ts_base > total_bytes || (total_bytes - ts_base) < ts_bytes) {
+        out->status = LOX_ERR_NO_MEM;
+        return LOX_ERR_NO_MEM;
+    }
+    ts_end = ts_base + ts_bytes;
+    rel_base = ((ts_end + sizeof(void *) - 1u) / sizeof(void *)) * sizeof(void *);
+    if (rel_base > total_bytes) {
+        out->status = LOX_ERR_NO_MEM;
+        return LOX_ERR_NO_MEM;
+    }
+
+    out->ram_kb = ram_kb;
+    out->kv_pct = kv_pct;
+    out->ts_pct = ts_pct;
+    out->rel_pct = rel_pct;
+    out->heap_total_bytes = (uint32_t)total_bytes;
+    out->kv_arena_bytes = (uint32_t)kv_bytes;
+    out->ts_arena_bytes = (uint32_t)ts_bytes;
+    out->rel_arena_bytes = (uint32_t)(total_bytes - rel_base);
+    out->wal_enabled = (cfg->storage != NULL) && (LOX_ENABLE_WAL != 0);
+
+    if (cfg->storage != NULL) {
+        uint32_t erase_size;
+        uint32_t wal_target;
+        uint32_t wal_min;
+        uint32_t kv_size;
+        uint32_t ts_size;
+        uint32_t rel_size;
+        uint32_t bank_size;
+        uint32_t fixed_bytes;
+        uint32_t need_without_wal;
+        uint32_t max_wal;
+        uint32_t max_wal_aligned;
+        uint32_t wal_size;
+
+        out->storage_capacity_bytes = cfg->storage->capacity;
+        out->storage_erase_size = cfg->storage->erase_size;
+        out->storage_write_size = cfg->storage->write_size;
+        if (cfg->storage->read == NULL || cfg->storage->write == NULL ||
+            cfg->storage->erase == NULL || cfg->storage->sync == NULL) {
+            out->status = LOX_ERR_INVALID;
+            return LOX_ERR_INVALID;
+        }
+        if (cfg->storage->erase_size == 0u || cfg->storage->write_size != 1u) {
+            out->status = LOX_ERR_INVALID;
+            return LOX_ERR_INVALID;
+        }
+
+        erase_size = cfg->storage->erase_size;
+        wal_target = erase_size * 8u;
+        wal_min = erase_size * 2u;
+        kv_size = lox_align_u32_local(lox_kv_snapshot_payload_max_local() + 32u, erase_size);
+#if LOX_ENABLE_TS
+        ts_size = lox_align_u32_local(out->ts_arena_bytes + 32u, erase_size);
+#else
+        ts_size = 0u;
+#endif
+#if LOX_ENABLE_REL
+        rel_size = lox_align_u32_local(out->rel_arena_bytes + 32u, erase_size);
+#else
+        rel_size = 0u;
+#endif
+        bank_size = kv_size + ts_size + rel_size;
+        fixed_bytes = erase_size * 2u;
+        need_without_wal = fixed_bytes + (bank_size * 2u);
+        out->kv_snapshot_bytes = kv_size;
+        out->ts_snapshot_bytes = ts_size;
+        out->rel_snapshot_bytes = rel_size;
+        out->bank_size = bank_size;
+
+        if (cfg->storage->capacity < need_without_wal + wal_min) {
+            out->storage_required_bytes = need_without_wal + wal_min;
+            out->status = LOX_ERR_STORAGE;
+            return LOX_ERR_STORAGE;
+        }
+
+        max_wal = cfg->storage->capacity - need_without_wal;
+        max_wal_aligned = (max_wal / erase_size) * erase_size;
+        if (max_wal_aligned < wal_min) {
+            out->storage_required_bytes = need_without_wal + wal_min;
+            out->status = LOX_ERR_STORAGE;
+            return LOX_ERR_STORAGE;
+        }
+
+        wal_size = wal_target;
+        if (wal_size > max_wal_aligned) wal_size = max_wal_aligned;
+        if (wal_size < wal_min) wal_size = wal_min;
+        out->wal_size = wal_size;
+        out->storage_required_bytes = (wal_size + (erase_size * 2u) + (bank_size * 2u));
+        if (cfg->storage->capacity < out->storage_required_bytes) {
+            out->status = LOX_ERR_STORAGE;
+            return LOX_ERR_STORAGE;
+        }
+    }
+
+    out->status = LOX_OK;
+    return LOX_OK;
 }
 
 lox_core_t *lox_core(lox_t *db) {

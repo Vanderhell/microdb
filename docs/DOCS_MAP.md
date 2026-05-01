@@ -1,4 +1,4 @@
-# Documentation Map
+﻿# Documentation Map
 
 This page is the central navigation entry for `loxdb` docs.
 
@@ -6,7 +6,12 @@ This page is the central navigation entry for `loxdb` docs.
 
 - `README.md` (project overview)
 - `docs/GETTING_STARTED_5_MIN.md` (quick setup)
+- `docs/GETTING_STARTED_DEV_10_MIN.md` (developer onboarding in 10 minutes)
 - `docs/PROGRAMMER_MANUAL.md` (full API + architecture)
+- `docs/LIMITS_AND_FAILURES.md` (hard limits, invariants, fail behavior)
+- `docs/STARTUP_DECISION_FLOW.md` (deterministic init/recovery flow)
+- `docs/TROUBLESHOOTING.md` (symptom -> cause -> action)
+- `docs/GOLDEN_PROFILES.md` (known-good hardware baselines)
 
 ## Product and Contract Docs
 
@@ -52,3 +57,13 @@ This page is the central navigation entry for `loxdb` docs.
 - `SECURITY.md`
 - `CODE_OF_CONDUCT.md`
 - `SUPPORT.md`
+
+## Change Workflow
+
+- `docs/CHANGE_CYCLE_CHECKLIST.md` (per-change implementation/test/docs gate)
+
+## Cross-Repo Synchronization
+
+- docs/DOCS_SYNC_PLAN.md (core/pro documentation sync workflow)
+
+

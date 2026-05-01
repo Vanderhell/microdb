@@ -687,6 +687,11 @@ if(LOX_BUILD_TESTS)
     target_link_libraries(test_error_strings PRIVATE loxdb)
     add_test(NAME test_error_strings COMMAND test_error_strings)
 
+    add_executable(test_preflight tests/test_preflight.c)
+    target_include_directories(test_preflight PRIVATE include tests port/ram src)
+    target_link_libraries(test_preflight PRIVATE loxdb)
+    add_test(NAME test_preflight COMMAND test_preflight)
+
     if(TARGET lox_json_wrapper AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_json_wrapper.c")
         add_executable(test_json_wrapper tests/test_json_wrapper.c)
         target_include_directories(test_json_wrapper PRIVATE include tests port/ram src)

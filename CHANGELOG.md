@@ -8,6 +8,21 @@ The format is inspired by Keep a Changelog and follows semantic versioning inten
 
 ### Added
 
+- Deterministic startup feasibility API:
+  - new `lox_preflight(const lox_cfg_t*, lox_preflight_report_t*)` in core API.
+  - new `lox_preflight_report_t` with RAM split and storage layout feasibility fields.
+  - preflight sizing mirrors durable layout math used by bootstrap path.
+- C++ wrapper startup-gating support:
+  - `loxdb::cpp::preflight(...)`
+  - `loxdb::cpp::Database::preflight(...)`
+- New tests:
+  - `tests/test_preflight.c`
+  - extended C++ wrapper coverage for preflight flow in `tests/test_cpp_wrapper.cpp`.
+- Documentation additions and sync baseline:
+  - developer/startup/limits troubleshooting skeletons completed and linked.
+  - cross-repo docs sync workflow (`docs/DOCS_SYNC_PLAN.md`).
+  - per-change execution gate (`docs/CHANGE_CYCLE_CHECKLIST.md`).
+
 - Free-tier core additions (MIT):
   - `lox_selfcheck()` API + runtime structural checks for KV/TS/REL/WAL.
   - WCET package:

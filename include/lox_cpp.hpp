@@ -16,6 +16,10 @@ inline const char *error_string(lox_err_t err) {
     return lox_err_to_string(err);
 }
 
+inline lox_err_t preflight(const lox_cfg_t &cfg, lox_preflight_report_t *out) {
+    return lox_preflight(&cfg, out);
+}
+
 class Database final {
 public:
     Database() = default;
@@ -40,6 +44,10 @@ public:
             initialized_ = true;
         }
         return rc;
+    }
+
+    static lox_err_t preflight(const lox_cfg_t &cfg, lox_preflight_report_t *out) {
+        return lox_preflight(&cfg, out);
     }
 
     lox_err_t deinit() {
