@@ -48,6 +48,7 @@ and can operate either in RAM-only mode or with a storage HAL for persistence an
 - Offline verifier contract: see [OFFLINE_VERIFIER.md](docs/OFFLINE_VERIFIER.md)
 - WCET analysis: see [WCET_ANALYSIS.md](docs/WCET_ANALYSIS.md)
 - Safety readiness package: see [SAFETY_READINESS.md](docs/SAFETY_READINESS.md)
+- Professional readiness checklist: see [PROFESSIONAL_READINESS.md](docs/PROFESSIONAL_READINESS.md)
 - Footprint-min contract: see [FOOTPRINT_MIN_CONTRACT.md](docs/FOOTPRINT_MIN_CONTRACT.md)
 - Latest hard verdict (currently 2026-04-19): see [hard_verdict_20260419.md](docs/results/hard_verdict_20260419.md)
 - Full validation artifacts and trend dashboard: see [docs/results/](docs/results/) and [trend_dashboard.md](docs/results/trend_dashboard.md)
