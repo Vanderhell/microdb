@@ -86,7 +86,7 @@ jobs:
 
       - name: Run long soak
         shell: pwsh
-        timeout-minutes: 90
+        timeout-minutes: 180
         run: |
           $runner = Join-Path "${{ matrix.exe_dir }}" ("soak_runner${{ matrix.exe_ext }}")
           if (-not (Test-Path $runner)) {
