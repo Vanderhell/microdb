@@ -138,9 +138,12 @@ jobs:
             Tee-Object -FilePath ./managed-threshold-apply.log
 
           & git diff --no-index -- CMakePresets.json CMakePresets.candidate.json > managed-threshold-presets.diff
-          if ($LASTEXITCODE -gt 1) {
-            throw "git diff failed with exit code $LASTEXITCODE"
+          $diffExit = $LASTEXITCODE
+          if ($diffExit -gt 1) {
+            throw "git diff failed with exit code $diffExit"
           }
+          # Exit code 1 means 'differences found' and is expected here.
+          $global:LASTEXITCODE = 0
 
           "### Candidate preset update preview" >> $env:GITHUB_STEP_SUMMARY
           if (Test-Path ./managed-threshold-presets.diff) {
