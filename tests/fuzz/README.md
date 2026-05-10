@@ -1,6 +1,8 @@
 # Fuzzing (libFuzzer)
 
-This directory contains libFuzzer harnesses for loxdb’s most safety-critical parsers and decoders.
+This directory contains libFuzzer harness scaffolding for loxdb’s most safety-critical parsers and decoders.
+
+Important: **scaffolding ≠ proven fuzz coverage**. The initial harnesses provide only minimal input plumbing and should be extended with WAL-format-aware mutators/dictionaries and additional targets as issues/coverage guide the work.
 
 ## Requirements
 
@@ -9,7 +11,7 @@ This directory contains libFuzzer harnesses for loxdb’s most safety-critical p
 
 ## Harnesses
 
-- `fuzz_wal_parser.cpp`: targets WAL entry/header parsing logic (via `tools/lox_verify.c` WAL inspector).
+- `fuzz_wal_parser.cpp`: minimal harness that exercises WAL header/entry parsing logic (via `tools/lox_verify.c` WAL inspector). It is not a production-ready fuzz target yet.
 
 ## How to add a new harness
 
@@ -28,4 +30,3 @@ This directory contains libFuzzer harnesses for loxdb’s most safety-critical p
 ```
 
 The second argument is the max runtime in seconds.
-
