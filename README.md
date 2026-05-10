@@ -13,18 +13,21 @@
 
 ## What is loxdb?
 
-loxdb is a compact embedded database written in C99 for firmware and small edge runtimes. It provides one unified API over three engines (KV, time-series, relational) with predictable memory behavior: a single heap allocation at `lox_init()`, fixed RAM budgeting across engines, and an optional storage HAL for persistence with WAL recovery.
+loxdb is a compact embedded database written in C99 for firmware and small edge runtimes.
+It provides one unified API over three engines (KV, time-series, relational) and is designed around predictable memory behavior.
+The library allocates once at `lox_init()` and runs without allocator churn during normal operation.
+Persistence is optional via a small storage HAL (read/write/erase/sync), with WAL + recovery when enabled.
 
 Test suite size: **504 microtest cases across 48 test files (+1 C++ wrapper test), organized into ~78 CTest entries including RAM-budget sweep matrices.**
 
 ## Why loxdb? (When to use / when not to)
 
-| Use loxdb when you need… | Avoid loxdb when you need… |
+| Use loxdb when you need... | Avoid loxdb when you need... |
 |---|---|
 | bounded RAM and predictable allocation behavior | unbounded queries / SQL flexibility |
 | durability with WAL recovery on flash-like media | a full SQL database with complex query planning |
 | KV + telemetry streams + small indexed tables in one library | multi-process concurrency / server database features |
-| a small storage HAL (read/write/erase/sync) integration | transparent large-object storage and advanced indexing |
+| a small storage HAL integration | transparent large-object storage and advanced indexing |
 
 ## Quick start (RAM-backed)
 
@@ -52,6 +55,14 @@ int main(void) {
 }
 ```
 
+## Build & test (desktop)
+
+```bash
+cmake --preset ci-debug-linux
+cmake --build --preset ci-debug-linux
+ctest --preset ci-debug-linux
+```
+
 ## Three engines in 30 seconds
 
 - **KV (key-value):** config/state, binary-safe values, optional TTL, bounded by compile-time limits.
@@ -62,7 +73,11 @@ int main(void) {
 
 | Platform | Status | Benchmarks |
 |---|---|---|
-| ESP32-S3 N16R8 (16MB NOR flash, 8MB PSRAM) | Verified — KV/TS/REL + WAL recovery + power-loss scenarios | `docs/BENCHMARKS.md` |
+| ESP32-S3 N16R8 (16MB NOR flash, 8MB PSRAM) | Verified (KV/TS/REL + WAL recovery + power-loss scenarios) | `docs/BENCHMARKS.md` |
+
+Notes:
+- Verified using the existing ESP32-S3 bench runners under `bench/`.
+- Published benchmark results live in `docs/BENCHMARKS.md` (template-only until filled with real measurements).
 
 ## Project status & roadmap
 
@@ -80,6 +95,7 @@ This repository is the MIT-licensed OSS edition. A planned commercial edition (`
 - Backend integration: `docs/BACKEND_INTEGRATION_GUIDE.md`
 - Port authoring (ESP32 reference): `docs/PORT_AUTHORING_GUIDE.md`
 - Schema migration: `docs/SCHEMA_MIGRATION_GUIDE.md`
+- Docs index: `docs/README.md`
 
 ## Contributing & support
 
@@ -90,3 +106,4 @@ This repository is the MIT-licensed OSS edition. A planned commercial edition (`
 ## License
 
 MIT (see `LICENSE`).
+
