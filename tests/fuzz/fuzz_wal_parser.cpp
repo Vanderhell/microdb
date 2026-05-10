@@ -5,7 +5,10 @@
 #include <cstdlib>
 #include <cstring>
 
-// We reuse the WAL inspector from the offline verifier to fuzz WAL parsing.
+// Scaffolding-only fuzz harness:
+// - Reuses the WAL inspector from the offline verifier to exercise WAL parsing.
+// - This is minimal input plumbing (no WAL-format-aware mutators/dictionaries yet).
+// - Do not interpret its presence as “WAL parser is fuzz-tested” in a coverage sense.
 // Rename verifier's main() so the harness can link.
 #define main lox_verify_main
 #include "../../tools/lox_verify.c"
@@ -49,4 +52,3 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     (void)fclose(fp);
     return 0;
 }
-
