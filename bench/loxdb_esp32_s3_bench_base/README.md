@@ -2,6 +2,8 @@
 
 This folder contains a terminal-driven benchmark runner for `ESP32-S3 N16R8`.
 
+Published results (when available): `docs/BENCHMARKS.md`
+
 - file: `lox_esp32_s3_bench.ino`
 - goal: validate core API behavior and measure latency/throughput metrics
 - mode: **terminal/manual trigger**; tests do not auto-run on boot
