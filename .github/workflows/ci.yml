@@ -96,3 +96,26 @@ jobs:
         with:
           name: static-analysis-style-report
           path: docs/results/cppcheck_style_report.txt
+
+  coverage-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+      - name: Configure (coverage)
+        run: cmake --preset ci-coverage-linux
+      - name: Build (coverage)
+        run: cmake --build --preset ci-coverage-linux
+      - name: Test (coverage)
+        run: ctest --preset ci-coverage-linux
+      - name: Capture coverage (lcov)
+        run: |
+          lcov --capture --directory build/ci-coverage-linux --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' '*/build/*' '*/tests/*' --output-file coverage.info
+          lcov --list coverage.info
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage.info

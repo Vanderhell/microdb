@@ -19,6 +19,22 @@
       }
     },
     {
+      "name": "ci-coverage-linux",
+      "displayName": "CI Coverage Linux",
+      "binaryDir": "${sourceDir}/build/ci-coverage-linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -g --coverage",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g --coverage",
+        "CMAKE_EXE_LINKER_FLAGS_DEBUG": "--coverage",
+        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "--coverage",
+        "LOX_MANAGED_STRESS_SMOKE_MAX_MS": "3000",
+        "LOX_MANAGED_STRESS_LONG_MAX_MS": "12000",
+        "LOX_FS_MATRIX_SMOKE_MAX_MS": "3500",
+        "LOX_FS_MATRIX_LONG_MAX_MS": "15000"
+      }
+    },
+    {
       "name": "ci-debug-windows",
       "displayName": "CI Debug Windows",
       "binaryDir": "${sourceDir}/build/ci-debug-windows",
@@ -107,6 +123,11 @@
       "configuration": "Debug"
     },
     {
+      "name": "ci-coverage-linux",
+      "configurePreset": "ci-coverage-linux",
+      "configuration": "Debug"
+    },
+    {
       "name": "ci-debug-windows",
       "configurePreset": "ci-debug-windows",
       "configuration": "Debug"
@@ -141,6 +162,14 @@
     {
       "name": "ci-debug-linux",
       "configurePreset": "ci-debug-linux",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci-coverage-linux",
+      "configurePreset": "ci-coverage-linux",
       "configuration": "Debug",
       "output": {
         "outputOnFailure": true
