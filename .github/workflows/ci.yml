@@ -97,6 +97,28 @@ jobs:
           name: static-analysis-style-report
           path: docs/results/cppcheck_style_report.txt
 
+  clang-tidy:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-tidy
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy
+      - name: Configure (compile_commands.json)
+        run: cmake -S . -B build/ci-clang-tidy-linux -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Run clang-tidy (non-blocking)
+        run: |
+          clang-tidy -p build/ci-clang-tidy-linux \
+            src/*.c port/posix/*.c port/ram/*.c \
+            --quiet \
+            | tee clang-tidy-report.txt
+      - name: Upload clang-tidy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-tidy-report
+          path: clang-tidy-report.txt
+
   coverage-linux:
     runs-on: ubuntu-latest
     steps:

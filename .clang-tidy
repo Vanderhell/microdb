@@ -1,0 +1,19 @@
+---
+Checks: >-
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  portability-*,
+  misc-*,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -bugprone-narrowing-conversions,
+  -bugprone-easily-swappable-parameters
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(include|src|port)/'
+AnalyzeTemporaryDtors: false
+FormatStyle: none
+...
+
