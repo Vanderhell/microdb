@@ -134,7 +134,7 @@ jobs:
       - name: Capture coverage (lcov)
         run: |
           lcov --capture --directory build/ci-coverage-linux --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' '*/build/*' '*/tests/*' --output-file coverage.info
+          lcov --remove coverage.info '*/build/*' '*/tests/*' --ignore-errors unused --output-file coverage.info
           lcov --list coverage.info
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
