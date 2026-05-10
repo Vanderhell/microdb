@@ -84,6 +84,30 @@ Depending on your platform/path:
 - CMake (main build and variants)
 - CTest (test execution)
 
+## 3.4 Error codes (public API)
+
+Public APIs return `lox_err_t` (see `include/lox.h`). Convert to a stable symbolic name via:
+
+- `lox_err_to_string(lox_err_t)`
+
+Common codes (high-level intent):
+
+- `LOX_OK`: success (some recovery paths are “success with recovery performed”)
+- `LOX_ERR_INVALID`: invalid argument/handle; storage contract violation at init/open (`erase_size == 0`, `write_size != 1`)
+- `LOX_ERR_NO_MEM`: RAM allocation/budget failure during init/profile setup
+- `LOX_ERR_FULL`: bounded container capacity reached (for example table max rows)
+- `LOX_ERR_NOT_FOUND`: missing key/stream/row
+- `LOX_ERR_EXPIRED`: KV value exists but TTL expired
+- `LOX_ERR_STORAGE`: backend I/O failure (`read/write/erase/sync`)
+- `LOX_ERR_CORRUPT`: unrecoverable persisted corruption detected in strict decode paths
+- `LOX_ERR_DISABLED`: feature disabled at compile time
+- `LOX_ERR_OVERFLOW`: caller buffer too small
+- `LOX_ERR_SCHEMA`: schema mismatch / unsupported migration path
+- `LOX_ERR_TXN_ACTIVE`: conflicting transaction state
+
+Recovery note:
+- WAL tail truncation and WAL header reset scenarios are designed to be *recoverable*; callers should treat success as “committed state preserved” rather than “no anomaly happened”. Use the offline verifier in QA gates when needed.
+
 ## 4. Data model and engine semantics
 
 ## 4.1 KV engine
