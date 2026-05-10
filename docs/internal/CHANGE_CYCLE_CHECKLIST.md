@@ -24,7 +24,7 @@ Use this checklist for every change batch.
 
 ## 5) Documentation Sync
 - [ ] Update canonical core docs (`LIMITS_AND_FAILURES`, `STARTUP_DECISION_FLOW`, etc.).
-- [ ] Update `docs/DOCS_MAP.md` if new docs were added.
+- [ ] Update `docs/README.md` if new docs were added.
 - [ ] Verify cross-repo links per `docs/DOCS_SYNC_PLAN.md`.
 
 ## 6) Release Hygiene
