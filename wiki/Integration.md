@@ -34,5 +34,5 @@ Use `lox_cfg_t` lock callbacks for multithreaded builds:
 
 ## Full Docs Map
 
-- `https://github.com/Vanderhell/loxdb/blob/master/docs/DOCS_MAP.md`
+- `https://github.com/Vanderhell/loxdb/blob/master/docs/README.md`
 

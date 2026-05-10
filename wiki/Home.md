@@ -24,7 +24,7 @@ It combines three engines behind one API:
 - [Storage HAL](Storage-HAL)
 - [Testing](Testing)
 - Programmer manual (repo doc): `docs/PROGRAMMER_MANUAL.md`
-- Docs map (repo doc): `docs/DOCS_MAP.md`
+- Docs index (repo doc): `docs/README.md`
 
 ## Repository
 
