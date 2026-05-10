@@ -1,7 +1,7 @@
 # Release Log
 
 This file tracks release-level outcomes and notable delivery notes.
-For detailed code-level change history, see [CHANGELOG.md](CHANGELOG.md).
+For detailed code-level change history, see [CHANGELOG.md](../../CHANGELOG.md).
 
 ## Unreleased
 
