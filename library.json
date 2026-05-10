@@ -1,0 +1,30 @@
+{
+  "name": "loxdb",
+  "version": "1.4.0",
+  "description": "Predictable-memory embedded database (C99) with KV, time-series, and relational engines plus WAL recovery.",
+  "keywords": [
+    "embedded",
+    "database",
+    "wal",
+    "kv",
+    "timeseries",
+    "relational",
+    "esp32"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vanderhell/loxdb.git"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "platforms": "*",
+  "headers": "lox.h",
+  "build": {
+    "includeDir": "include",
+    "srcDir": "src"
+  }
+}
+

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(loxdb VERSION 1.0.0 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -620,6 +621,25 @@ install(
     EXPORT loxdbTargets
     FILE loxdbTargets.cmake
     NAMESPACE loxdb::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/loxdb
+)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/loxdbConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/loxdbConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/loxdb
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/loxdbConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(
+    FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/loxdbConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/loxdbConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/loxdb
 )
 

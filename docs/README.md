@@ -18,3 +18,10 @@ Other technical notes:
 
 Internal/process documents live in `docs/internal/`.
 
+## Distribution (planned)
+
+Publishing is maintainer-driven and not automated yet:
+
+- PlatformIO Registry (`library.json`)
+- Arduino Library Manager (`library.properties`)
+- CMake install + `find_package(loxdb)` via installed config files (see `CMakeLists.txt` and `cmake/loxdbConfig.cmake.in`)
