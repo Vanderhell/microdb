@@ -15,6 +15,8 @@
 
 loxdb is a compact embedded database written in C99 for firmware and small edge runtimes. It provides one unified API over three engines (KV, time-series, relational) with predictable memory behavior: a single heap allocation at `lox_init()`, fixed RAM budgeting across engines, and an optional storage HAL for persistence with WAL recovery.
 
+Test suite size: **504 microtest cases across 48 test files (+1 C++ wrapper test), organized into ~78 CTest entries including RAM-budget sweep matrices.**
+
 ## Why loxdb? (When to use / when not to)
 
 | Use loxdb when you need… | Avoid loxdb when you need… |
@@ -88,4 +90,3 @@ This repository is the MIT-licensed OSS edition. A planned commercial edition (`
 ## License
 
 MIT (see `LICENSE`).
-
