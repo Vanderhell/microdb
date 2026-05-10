@@ -44,6 +44,7 @@ Not implemented in this PR:
 1. **Coverage lane**
    - Add a dedicated CMake preset `ci-coverage-linux` (`-O0 -g --coverage`) and a CI job that runs *only* that preset, then uploads coverage (Codecov/Coveralls).
    - Do not mix coverage flags into sanitizer lanes.
+   - Optional (badge): enable Codecov for the repo, then add `codecov/codecov-action` upload step and a Codecov badge to `README.md`.
 
 2. **Hardware-in-the-loop (HIL) or emulator lane**
    - Decide between:
@@ -52,4 +53,3 @@ Not implemented in this PR:
      - a hybrid approach (QEMU smoke + periodic HIL).
    - Define the gate: smoke-only, nightly, or release-only.
    - Determine how artifacts (serial logs, crash dumps, perf outputs) are captured and retained.
-
