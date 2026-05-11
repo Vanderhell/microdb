@@ -1,0 +1,58 @@
+loxdb-bench> [PROFILE] switched to balanced paced=OFF
+[OK] DB ready (wipe=1, profile=balanced)
+loxdb-bench> 
+=== loxdb ESP32-S3 benchmark start (profile=balanced) ===
+[EFFECTIVE] kv_capacity=248 (target=320) wal_total=32736B
+[KV] capped ops to capacity: 248
+[BENCH] kv_put           total=6.522 ms avg=26.298 us p50=26 p95=27 min=24 max=58 max_op~0 xmax/p50=2.2 spk>1ms=0@0 spk>5ms=0@0 ops/s=38025.1 MB/s=0.145 ops=248 samp=248 heap_d=0
+[SLO] kv_put           OK (max=58<=15000, spk>5ms=0<=12)
+[PHASE] kv_put           cold_ops=64 cold_avg=26.312 us steady_ops=184 steady_avg=26.293 us
+[BENCH] kv_get           total=2.205 ms avg=8.891 us p50=9 p95=9 min=6 max=23 max_op~11 xmax/p50=2.6 spk>1ms=0@0 spk>5ms=0@0 ops/s=112471.7 MB/s=0.429 ops=248 samp=248 heap_d=0
+[SLO] kv_get           OK (max=23<=15000, spk>5ms=0<=12)
+[PHASE] kv_get           cold_ops=64 cold_avg=8.781 us steady_ops=184 steady_avg=8.929 us
+[BENCH] kv_del           total=5.832 ms avg=23.516 us p50=22 p95=26 min=20 max=118 max_op~124 xmax/p50=5.4 spk>1ms=0@0 spk>5ms=0@0 ops/s=42524.0 MB/s=0.000 ops=248 samp=248 heap_d=0
+[SLO] kv_del           OK (max=118<=15000, spk>5ms=0<=12)
+[PHASE] kv_del           cold_ops=64 cold_avg=22.344 us steady_ops=184 steady_avg=23.924 us
+[CHECK] KV benchmark: PASS
+[BENCH] ts_insert        total=19.981 ms avg=31.220 us p50=19 p95=19 min=18 max=7797 max_op~494 xmax/p50=410.4 spk>1ms=1@494 spk>5ms=1@494 ops/s=32030.4 MB/s=0.122 ops=640 samp=640 heap_d=0
+[SLO] ts_insert        OK (max=7797<=15000, spk>5ms=1<=12)
+[PHASE] ts_insert        cold_ops=64 cold_avg=19.062 us steady_ops=576 steady_avg=32.571 us
+[TS] target=640 retained=640 dropped=0
+[BENCH] ts_query_buf     total=0.542 ms avg=542.000 us p50=542 p95=542 min=542 max=542 max_op~0 xmax/p50=1.0 spk>1ms=0@0 spk>5ms=0@0 ops/s=1845.0 MB/s=2.252 ops=1 samp=1 heap_d=0
+[CHECK] TS benchmark: PASS
+[BENCH] rel_insert       total=37.695 ms avg=75.390 us p50=29 p95=200 min=22 max=219 max_op~260 xmax/p50=7.6 spk>1ms=0@0 spk>5ms=0@0 ops/s=13264.4 MB/s=0.101 ops=500 samp=500 heap_d=0
+[SLO] rel_insert       OK (max=219<=15000, spk>5ms=0<=12)
+[PHASE] rel_insert       cold_ops=64 cold_avg=23.719 us steady_ops=436 steady_avg=82.975 us
+[BENCH] rel_find(index)  total=0.013 ms avg=13.000 us p50=13 p95=13 min=13 max=13 max_op~0 xmax/p50=1.0 spk>1ms=0@0 spk>5ms=0@0 ops/s=76923.1 MB/s=0.587 ops=1 samp=1 heap_d=0
+[REL] rows_expected=500 rows_actual=500
+[CHECK] REL benchmark: PASS
+[WAL] baseline before warmup: used=0 total=32736 fill=0%
+[BENCH] wal_kv_put       total=13.072 ms avg=34.042 us p50=34 p95=38 min=32 max=50 max_op~0 xmax/p50=1.5 spk>1ms=0@0 spk>5ms=0@0 ops/s=29375.8 MB/s=0.896 ops=384 samp=77 heap_d=0
+[SLO] wal_kv_put       OK (max=50<=15000, spk>5ms=0<=12)
+[WAL] warmup target_fill=75% reached=75% peak=75% ops_done=384/9600 steady_ops=320 (min=128)
+[PHASE] wal_kv_put       cold_ops=64 cold_avg=34.234 us steady_ops=320 steady_avg=34.003 us
+[WAL] before compact: used=24624 total=32736 fill=75%
+[BENCH] compact          total=12.255 ms avg=12255.000 us p50=12255 p95=12255 min=12255 max=12255 max_op~0 xmax/p50=1.0 spk>1ms=1@0 spk>5ms=1@0 ops/s=81.6 MB/s=0.000 ops=1 samp=1 heap_d=0
+[WAL] after compact:  used=0 total=32736 fill=0%
+[CHECK] WAL compact: PASS
+[BENCH] reopen           total=43.514 ms avg=43514.000 us p50=43514 p95=43514 min=43514 max=43514 max_op~0 xmax/p50=1.0 spk>1ms=1@0 spk>5ms=1@0 ops/s=23.0 MB/s=0.000 ops=1 samp=1 heap_d=0
+[CHECK] Reopen integrity: PASS
+[MIGRATE] calls=1 old=1 new=2
+[CHECK] Migration callback: PASS
+[CHECK] TXN commit/rollback: PASS
+[STATS] kv=202/248 (81%) coll=0 evict=0
+[STATS] ts_streams=1 ts_samples=640 ts_fill=39%
+[STATS] wal=96/32736 (0%) rel_tables=2 rel_rows=500
+=== loxdb ESP32-S3 benchmark end ===
+loxdb-bench> [METRICS] count=10
+[METRIC] kv_put total=6.522ms avg=26.298us p50=26 p95=27 max=58@0 xmax/p50=2.2 spk>1ms=0@0 spk>5ms=0@0 ops/s=38025.1 MB/s=0.145 heap_d=0
+[METRIC] kv_get total=2.205ms avg=8.891us p50=9 p95=9 max=23@11 xmax/p50=2.6 spk>1ms=0@0 spk>5ms=0@0 ops/s=112471.7 MB/s=0.429 heap_d=0
+[METRIC] kv_del total=5.832ms avg=23.516us p50=22 p95=26 max=118@124 xmax/p50=5.4 spk>1ms=0@0 spk>5ms=0@0 ops/s=42524.0 MB/s=0.000 heap_d=0
+[METRIC] ts_insert total=19.981ms avg=31.220us p50=19 p95=19 max=7797@494 xmax/p50=410.4 spk>1ms=1@494 spk>5ms=1@494 ops/s=32030.4 MB/s=0.122 heap_d=0
+[METRIC] ts_query_buf total=0.542ms avg=542.000us p50=542 p95=542 max=542@0 xmax/p50=1.0 spk>1ms=0@0 spk>5ms=0@0 ops/s=1845.0 MB/s=2.252 heap_d=0
+[METRIC] rel_insert total=37.695ms avg=75.390us p50=29 p95=200 max=219@260 xmax/p50=7.6 spk>1ms=0@0 spk>5ms=0@0 ops/s=13264.4 MB/s=0.101 heap_d=0
+[METRIC] rel_find(index) total=0.013ms avg=13.000us p50=13 p95=13 max=13@0 xmax/p50=1.0 spk>1ms=0@0 spk>5ms=0@0 ops/s=76923.1 MB/s=0.587 heap_d=0
+[METRIC] wal_kv_put total=13.072ms avg=34.042us p50=34 p95=38 max=50@0 xmax/p50=1.5 spk>1ms=0@0 spk>5ms=0@0 ops/s=29375.8 MB/s=0.896 heap_d=0
+[METRIC] compact total=12.255ms avg=12255.000us p50=12255 p95=12255 max=12255@0 xmax/p50=1.0 spk>1ms=1@0 spk>5ms=1@0 ops/s=81.6 MB/s=0.000 heap_d=0
+[METRIC] reopen total=43.514ms avg=43514.000us p50=43514 p95=43514 max=43514@0 xmax/p50=1.0 spk>1ms=1@0 spk>5ms=1@0 ops/s=23.0 MB/s=0.000 heap_d=0
+loxdb-bench> 

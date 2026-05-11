@@ -10,7 +10,11 @@ extern "C" {
 }
 
 #if defined(ARDUINO_ARCH_ESP32)
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && (ARDUINO_USB_CDC_ON_BOOT)
+#define MDB_CONSOLE Serial
+#else
 #define MDB_CONSOLE Serial0
+#endif
 #else
 #define MDB_CONSOLE Serial
 #endif
