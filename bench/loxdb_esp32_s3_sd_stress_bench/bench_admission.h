@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef LOXDB_SD_STRESS_BENCH_ADMISSION_H
 #define LOXDB_SD_STRESS_BENCH_ADMISSION_H
 
@@ -15,4 +16,3 @@ struct bench_admission_profile_t {
 };
 
 #endif /* LOXDB_SD_STRESS_BENCH_ADMISSION_H */
-
