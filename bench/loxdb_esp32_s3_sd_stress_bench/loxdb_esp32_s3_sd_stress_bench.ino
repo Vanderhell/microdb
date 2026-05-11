@@ -4,6 +4,8 @@
 #include <FS.h>
 #include <string.h>
 
+#include "bench_admission.h"
+
 /* Increase core engine limits for large SD stress profile. */
 #ifndef LOX_KV_MAX_KEYS
 #define LOX_KV_MAX_KEYS 4096
@@ -153,17 +155,6 @@ static uint32_t rng_next(void) {
   s = s * 1664525u + 1013904223u;
   return s;
 }
-
-typedef struct bench_admission_profile_t bench_admission_profile_t;
-
-struct bench_admission_profile_t {
-  const char *name;
-  uint16_t ram_kb;
-  uint8_t kv_pct;
-  uint8_t ts_pct;
-  uint8_t rel_pct;
-  uint8_t wal_compact_threshold_pct;
-};
 
 static void startup_fail(const char *what, const char *hint) {
   Serial.printf("[FATAL] %s\n", what ? what : "startup failed");
