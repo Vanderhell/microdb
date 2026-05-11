@@ -1,0 +1,358 @@
+﻿ESP-ROM:esp32s3-20210327
+[OK] SD mounted card=7580MB
+[OK] profile=soak mix=35/35/30
+[OK] admitted profile=soak-A ram_kb=4096 split=40/30/30 wal_th=70
+[OK] loxdb SD stress bench ready
+SD pins CLK=17 CMD=18 D0=16 D3=47
+LCD pins SCLK=10 MOSI=11 CS=12 DC=13 RST=14
+ADMISSION ram_kb=4096 split=40/30/30 wal_th=70
+Commands:
+  run | pause | resume
+  profile smoke|soak|stress
+  reinit
+  verify on|off
+  mode all|kv|ts|rel
+  clear kv|ts|rel|all
+  slist
+  swipe <index> confirm | swipe all confirm
+  compact | stats | resetdb | formatdb
+[PRESSURE] kv=100 ts=2 rel=19 wal=1 risk=100 ops=1
+[STATS] kv=248/248 ts_samples=3622 rel_rows=3148 wal=332/32736
+[BENCH] profile=soak mode=all verify=on ok=1 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[OK] profile=stress mix=25/35/40
+[INFO] profile affects admission; run 'reinit' (or resetdb/formatdb) to re-admit
+[WARN] lox_init reject profile=stress-A rc=-2 (LOX_ERR_NO_MEM)
+[OK] admitted profile=stress-B ram_kb=4096 split=40/30/30 wal_th=70
+[OK] db reset complete
+[OK] mode=all
+[OK] verify=on
+[PRESSURE] kv=0 ts=0 rel=0 wal=1 risk=1 ops=0
+[STATS] kv=0/248 ts_samples=0 rel_rows=0 wal=580/32736
+[BENCH] profile=stress mode=all verify=on ok=0 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=0 ts=0 rel=0 wal=1 risk=1 ops=1
+[STATS] kv=1/248 ts_samples=0 rel_rows=0 wal=620/32736
+[BENCH] profile=stress mode=all verify=on ok=1 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=31 ts=0 rel=0 wal=48 risk=68 ops=320
+[STATS] kv=78/248 ts_samples=105 rel_rows=137 wal=15724/32736
+[BENCH] profile=stress mode=all verify=on ok=3 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=47 ts=0 rel=1 wal=0 risk=47 ops=472
+[STATS] kv=117/248 ts_samples=151 rel_rows=204 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=5 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=84 ts=0 rel=1 wal=46 risk=84 ops=796
+[STATS] kv=209/248 ts_samples=263 rel_rows=324 wal=15088/32736
+[BENCH] profile=stress mode=all verify=on ok=9 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=2 wal=0 risk=100 ops=963
+[STATS] kv=248/248 ts_samples=319 rel_rows=392 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=10 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=3 wal=38 risk=100 ops=1232
+[STATS] kv=248/248 ts_samples=406 rel_rows=498 wal=12592/32736
+[BENCH] profile=stress mode=all verify=on ok=12 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=3 wal=0 risk=100 ops=1450
+[STATS] kv=248/248 ts_samples=475 rel_rows=593 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=14 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=4 wal=45 risk=100 ops=1769
+[STATS] kv=248/248 ts_samples=596 rel_rows=709 wal=14868/32736
+[BENCH] profile=stress mode=all verify=on ok=17 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=4 wal=0 risk=100 ops=1943
+[STATS] kv=248/248 ts_samples=650 rel_rows=775 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=20 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=5 wal=45 risk=100 ops=2258
+[STATS] kv=248/248 ts_samples=749 rel_rows=918 wal=15004/32736
+[BENCH] profile=stress mode=all verify=on ok=23 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=6 wal=0 risk=100 ops=2425
+[STATS] kv=248/248 ts_samples=808 rel_rows=990 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=24 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=6 wal=45 risk=100 ops=2742
+[STATS] kv=248/248 ts_samples=922 rel_rows=1107 wal=14768/32736
+[BENCH] profile=stress mode=all verify=on ok=28 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=7 wal=0 risk=100 ops=2917
+[STATS] kv=248/248 ts_samples=977 rel_rows=1173 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=31 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=7 wal=45 risk=100 ops=3236
+[STATS] kv=248/248 ts_samples=1080 rel_rows=1306 wal=15028/32736
+[BENCH] profile=stress mode=all verify=on ok=35 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=8 wal=0 risk=100 ops=3407
+[STATS] kv=248/248 ts_samples=1144 rel_rows=1365 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=36 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=9 wal=44 risk=100 ops=3714
+[STATS] kv=248/248 ts_samples=1242 rel_rows=1491 wal=14424/32736
+[BENCH] profile=stress mode=all verify=on ok=39 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=9 wal=0 risk=100 ops=3893
+[STATS] kv=248/248 ts_samples=1301 rel_rows=1569 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=40 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=10 wal=44 risk=100 ops=4207
+[STATS] kv=248/248 ts_samples=1420 rel_rows=1681 wal=14604/32736
+[BENCH] profile=stress mode=all verify=on ok=44 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=0 rel=10 wal=0 risk=100 ops=4385
+[STATS] kv=248/248 ts_samples=1483 rel_rows=1749 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=46 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=11 wal=44 risk=100 ops=4697
+[STATS] kv=248/248 ts_samples=1604 rel_rows=1869 wal=14644/32736
+[BENCH] profile=stress mode=all verify=on ok=48 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=11 wal=0 risk=100 ops=4873
+[STATS] kv=248/248 ts_samples=1664 rel_rows=1942 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=50 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=12 wal=45 risk=100 ops=5188
+[STATS] kv=248/248 ts_samples=1763 rel_rows=2082 wal=14956/32736
+[BENCH] profile=stress mode=all verify=on ok=53 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=13 wal=0 risk=100 ops=5358
+[STATS] kv=248/248 ts_samples=1819 rel_rows=2150 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=55 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=13 wal=45 risk=100 ops=5678
+[STATS] kv=248/248 ts_samples=1928 rel_rows=2267 wal=14868/32736
+[BENCH] profile=stress mode=all verify=on ok=60 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=14 wal=0 risk=100 ops=5847
+[STATS] kv=248/248 ts_samples=1989 rel_rows=2341 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=61 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=15 wal=44 risk=100 ops=6156
+[STATS] kv=248/248 ts_samples=2090 rel_rows=2468 wal=14536/32736
+[BENCH] profile=stress mode=all verify=on ok=64 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=15 wal=0 risk=100 ops=6334
+[STATS] kv=248/248 ts_samples=2147 rel_rows=2543 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=65 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=16 wal=44 risk=100 ops=6647
+[STATS] kv=248/248 ts_samples=2260 rel_rows=2657 wal=14580/32736
+[BENCH] profile=stress mode=all verify=on ok=68 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=16 wal=0 risk=100 ops=6828
+[STATS] kv=248/248 ts_samples=2329 rel_rows=2720 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=70 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=17 wal=45 risk=100 ops=7141
+[STATS] kv=248/248 ts_samples=2439 rel_rows=2848 wal=14752/32736
+[BENCH] profile=stress mode=all verify=on ok=74 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=17 wal=0 risk=100 ops=7314
+[STATS] kv=248/248 ts_samples=2487 rel_rows=2924 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=76 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=18 wal=44 risk=100 ops=7627
+[STATS] kv=248/248 ts_samples=2593 rel_rows=3041 wal=14588/32736
+[BENCH] profile=stress mode=all verify=on ok=79 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=18 wal=0 risk=100 ops=7807
+[STATS] kv=248/248 ts_samples=2657 rel_rows=3107 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=80 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=19 wal=43 risk=100 ops=8111
+[STATS] kv=248/248 ts_samples=2770 rel_rows=3228 wal=14312/32736
+[BENCH] profile=stress mode=all verify=on ok=83 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=20 wal=0 risk=100 ops=8294
+[STATS] kv=248/248 ts_samples=2837 rel_rows=3304 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=86 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=20 wal=41 risk=100 ops=8587
+[STATS] kv=248/248 ts_samples=2946 rel_rows=3406 wal=13584/32736
+[BENCH] profile=stress mode=all verify=on ok=91 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=21 wal=0 risk=100 ops=8785
+[STATS] kv=248/248 ts_samples=3013 rel_rows=3488 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=92 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=1 rel=22 wal=44 risk=100 ops=9096
+[STATS] kv=248/248 ts_samples=3120 rel_rows=3607 wal=14528/32736
+[BENCH] profile=stress mode=all verify=on ok=95 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=22 wal=0 risk=100 ops=9276
+[STATS] kv=248/248 ts_samples=3184 rel_rows=3674 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=97 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=23 wal=45 risk=100 ops=9590
+[STATS] kv=248/248 ts_samples=3279 rel_rows=3804 wal=14760/32736
+[BENCH] profile=stress mode=all verify=on ok=100 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=23 wal=0 risk=100 ops=9766
+[STATS] kv=248/248 ts_samples=3339 rel_rows=3868 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=102 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=24 wal=24 risk=100 ops=9936
+[STATS] kv=248/248 ts_samples=3398 rel_rows=3935 wal=7968/32736
+[BENCH] profile=stress mode=all verify=on ok=103 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=24 wal=67 risk=100 ops=10236
+[STATS] kv=248/248 ts_samples=3495 rel_rows=4059 wal=22092/32736
+[BENCH] profile=stress mode=all verify=on ok=106 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=24 wal=0 risk=100 ops=10254
+[STATS] kv=248/248 ts_samples=3501 rel_rows=4067 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=107 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=25 wal=42 risk=100 ops=10547
+[STATS] kv=248/248 ts_samples=3599 rel_rows=4184 wal=13756/32736
+[BENCH] profile=stress mode=all verify=on ok=110 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=26 wal=0 risk=100 ops=10743
+[STATS] kv=248/248 ts_samples=3666 rel_rows=4261 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=111 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=26 wal=43 risk=100 ops=11049
+[STATS] kv=248/248 ts_samples=3775 rel_rows=4381 wal=14356/32736
+[BENCH] profile=stress mode=all verify=on ok=115 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=27 wal=0 risk=100 ops=11236
+[STATS] kv=248/248 ts_samples=3847 rel_rows=4439 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=117 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=27 wal=43 risk=100 ops=11538
+[STATS] kv=248/248 ts_samples=3941 rel_rows=4560 wal=14156/32736
+[BENCH] profile=stress mode=all verify=on ok=121 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=28 wal=0 risk=100 ops=11725
+[STATS] kv=248/248 ts_samples=4007 rel_rows=4633 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=122 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=28 wal=41 risk=100 ops=12015
+[STATS] kv=248/248 ts_samples=4113 rel_rows=4749 wal=13648/32736
+[BENCH] profile=stress mode=all verify=on ok=124 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=29 wal=0 risk=100 ops=12214
+[STATS] kv=248/248 ts_samples=4194 rel_rows=4822 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=126 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=30 wal=42 risk=100 ops=12508
+[STATS] kv=248/248 ts_samples=4294 rel_rows=4940 wal=13812/32736
+[BENCH] profile=stress mode=all verify=on ok=130 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=30 wal=0 risk=100 ops=12700
+[STATS] kv=248/248 ts_samples=4354 rel_rows=5025 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=132 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=31 wal=43 risk=100 ops=12998
+[STATS] kv=248/248 ts_samples=4448 rel_rows=5161 wal=14200/32736
+[BENCH] profile=stress mode=all verify=on ok=134 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=31 wal=65 risk=100 ops=13155
+[STATS] kv=248/248 ts_samples=4503 rel_rows=5223 wal=21556/32736
+[BENCH] profile=stress mode=all verify=on ok=136 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=31 wal=0 risk=100 ops=13185
+[STATS] kv=248/248 ts_samples=4517 rel_rows=5232 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=137 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=32 wal=27 risk=100 ops=13379
+[STATS] kv=248/248 ts_samples=4591 rel_rows=5309 wal=9140/32736
+[BENCH] profile=stress mode=all verify=on ok=138 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=2 rel=33 wal=0 risk=100 ops=13674
+[STATS] kv=248/248 ts_samples=4686 rel_rows=5425 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=140 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=33 wal=41 risk=100 ops=13965
+[STATS] kv=248/248 ts_samples=4781 rel_rows=5539 wal=13604/32736
+[BENCH] profile=stress mode=all verify=on ok=143 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=34 wal=0 risk=100 ops=14162
+[STATS] kv=248/248 ts_samples=4847 rel_rows=5622 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=146 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=34 wal=40 risk=100 ops=14446
+[STATS] kv=248/248 ts_samples=4949 rel_rows=5729 wal=13272/32736
+[BENCH] profile=stress mode=all verify=on ok=149 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=35 wal=0 risk=100 ops=14650
+[STATS] kv=248/248 ts_samples=5017 rel_rows=5819 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=152 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=36 wal=43 risk=100 ops=14948
+[STATS] kv=248/248 ts_samples=5116 rel_rows=5948 wal=14128/32736
+[BENCH] profile=stress mode=all verify=on ok=156 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=36 wal=0 risk=100 ops=15136
+[STATS] kv=248/248 ts_samples=5183 rel_rows=6020 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=159 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=37 wal=43 risk=100 ops=15443
+[STATS] kv=248/248 ts_samples=5287 rel_rows=6139 wal=14356/32736
+[BENCH] profile=stress mode=all verify=on ok=163 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=37 wal=0 risk=100 ops=15628
+[STATS] kv=248/248 ts_samples=5358 rel_rows=6204 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=165 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=38 wal=41 risk=100 ops=15917
+[STATS] kv=248/248 ts_samples=5457 rel_rows=6315 wal=13504/32736
+[BENCH] profile=stress mode=all verify=on ok=167 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=39 wal=0 risk=100 ops=16118
+[STATS] kv=248/248 ts_samples=5524 rel_rows=6395 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=168 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=39 wal=39 risk=100 ops=16390
+[STATS] kv=248/248 ts_samples=5611 rel_rows=6508 wal=12816/32736
+[BENCH] profile=stress mode=all verify=on ok=171 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=40 wal=0 risk=100 ops=16601
+[STATS] kv=248/248 ts_samples=5676 rel_rows=6609 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=173 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=41 wal=40 risk=100 ops=16887
+[STATS] kv=248/248 ts_samples=5783 rel_rows=6720 wal=13416/32736
+[BENCH] profile=stress mode=all verify=on ok=175 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=41 wal=0 risk=100 ops=17088
+[STATS] kv=248/248 ts_samples=5841 rel_rows=6811 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=178 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=42 wal=31 risk=100 ops=17303
+[STATS] kv=248/248 ts_samples=5898 rel_rows=6905 wal=10156/32736
+[BENCH] profile=stress mode=all verify=on ok=181 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=42 wal=69 risk=100 ops=17576
+[STATS] kv=248/248 ts_samples=5992 rel_rows=6999 wal=22756/32736
+[BENCH] profile=stress mode=all verify=on ok=184 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=42 wal=0 risk=100 ops=17579
+[STATS] kv=248/248 ts_samples=5993 rel_rows=7001 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=184 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=43 wal=41 risk=100 ops=17872
+[STATS] kv=248/248 ts_samples=6097 rel_rows=7114 wal=13712/32736
+[BENCH] profile=stress mode=all verify=on ok=187 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=43 wal=0 risk=100 ops=18068
+[STATS] kv=248/248 ts_samples=6162 rel_rows=7193 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=189 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=3 rel=44 wal=39 risk=100 ops=18341
+[STATS] kv=248/248 ts_samples=6242 rel_rows=7311 wal=12880/32736
+[BENCH] profile=stress mode=all verify=on ok=193 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=45 wal=0 risk=100 ops=18557
+[STATS] kv=248/248 ts_samples=6317 rel_rows=7390 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=195 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=45 wal=39 risk=100 ops=18835
+[STATS] kv=248/248 ts_samples=6413 rel_rows=7495 wal=12968/32736
+[BENCH] profile=stress mode=all verify=on ok=198 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=46 wal=0 risk=100 ops=19048
+[STATS] kv=248/248 ts_samples=6489 rel_rows=7577 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=199 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=47 wal=42 risk=100 ops=19342
+[STATS] kv=248/248 ts_samples=6585 rel_rows=7703 wal=13896/32736
+[BENCH] profile=stress mode=all verify=on ok=204 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=47 wal=0 risk=100 ops=19534
+[STATS] kv=248/248 ts_samples=6649 rel_rows=7781 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=205 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=48 wal=41 risk=100 ops=19825
+[STATS] kv=248/248 ts_samples=6751 rel_rows=7896 wal=13652/32736
+[BENCH] profile=stress mode=all verify=on ok=207 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=48 wal=0 risk=100 ops=20024
+[STATS] kv=248/248 ts_samples=6823 rel_rows=7970 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=210 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=49 wal=39 risk=100 ops=20297
+[STATS] kv=248/248 ts_samples=6930 rel_rows=8083 wal=12924/32736
+[BENCH] profile=stress mode=all verify=on ok=213 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=49 wal=66 risk=100 ops=20483
+[STATS] kv=248/248 ts_samples=7002 rel_rows=8153 wal=21644/32736
+[BENCH] profile=stress mode=all verify=on ok=215 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=49 wal=0 risk=100 ops=20512
+[STATS] kv=248/248 ts_samples=7015 rel_rows=8160 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=215 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=50 wal=34 risk=100 ops=20751
+[STATS] kv=248/248 ts_samples=7096 rel_rows=8261 wal=11304/32736
+[BENCH] profile=stress mode=all verify=on ok=217 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=51 wal=0 risk=100 ops=20999
+[STATS] kv=248/248 ts_samples=7175 rel_rows=8360 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=220 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=51 wal=41 risk=100 ops=21286
+[STATS] kv=248/248 ts_samples=7261 rel_rows=8483 wal=13540/32736
+[BENCH] profile=stress mode=all verify=on ok=223 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=52 wal=0 risk=100 ops=21485
+[STATS] kv=248/248 ts_samples=7322 rel_rows=8568 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=225 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=52 wal=42 risk=100 ops=21782
+[STATS] kv=248/248 ts_samples=7439 rel_rows=8678 wal=13888/32736
+[BENCH] profile=stress mode=all verify=on ok=228 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=53 wal=0 risk=100 ops=21975
+[STATS] kv=248/248 ts_samples=7502 rel_rows=8753 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=230 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=54 wal=39 risk=100 ops=22245
+[STATS] kv=248/248 ts_samples=7584 rel_rows=8874 wal=12816/32736
+[BENCH] profile=stress mode=all verify=on ok=234 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=54 wal=0 risk=100 ops=22461
+[STATS] kv=248/248 ts_samples=7662 rel_rows=8957 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=237 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=55 wal=37 risk=100 ops=22724
+[STATS] kv=248/248 ts_samples=7768 rel_rows=9054 wal=12296/32736
+[BENCH] profile=stress mode=all verify=on ok=239 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=4 rel=55 wal=0 risk=100 ops=22952
+[STATS] kv=248/248 ts_samples=7853 rel_rows=9138 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=241 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=56 wal=40 risk=100 ops=23236
+[STATS] kv=248/248 ts_samples=7946 rel_rows=9258 wal=13412/32736
+[BENCH] profile=stress mode=all verify=on ok=244 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=56 wal=65 risk=100 ops=23411
+[STATS] kv=248/248 ts_samples=8005 rel_rows=9326 wal=21600/32736
+[BENCH] profile=stress mode=all verify=on ok=245 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=56 wal=0 risk=100 ops=23441
+[STATS] kv=248/248 ts_samples=8012 rel_rows=9335 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=246 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=57 wal=41 risk=100 ops=23731
+[STATS] kv=248/248 ts_samples=8110 rel_rows=9452 wal=13636/32736
+[BENCH] profile=stress mode=all verify=on ok=248 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=58 wal=0 risk=100 ops=23930
+[STATS] kv=248/248 ts_samples=8165 rel_rows=9531 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=251 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=58 wal=39 risk=100 ops=24202
+[STATS] kv=248/248 ts_samples=8267 rel_rows=9638 wal=12792/32736
+[BENCH] profile=stress mode=all verify=on ok=255 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=59 wal=0 risk=100 ops=24417
+[STATS] kv=248/248 ts_samples=8348 rel_rows=9726 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=257 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=59 wal=36 risk=100 ops=24675
+[STATS] kv=248/248 ts_samples=8447 rel_rows=9820 wal=12032/32736
+[BENCH] profile=stress mode=all verify=on ok=260 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=60 wal=0 risk=100 ops=24910
+[STATS] kv=248/248 ts_samples=8525 rel_rows=9904 wal=0/32736
+[BENCH] profile=stress mode=all verify=on ok=263 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
+[PRESSURE] kv=100 ts=5 rel=61 wal=40 risk=100 ops=25193
+[STATS] kv=248/248 ts_samples=8622 rel_rows=10018 wal=13304/32736
+[BENCH] profile=stress mode=all verify=on ok=265 fail=0 compact=0 last_compact_ms=0 streams=8 tables=4
