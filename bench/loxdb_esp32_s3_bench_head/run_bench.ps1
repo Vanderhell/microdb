@@ -86,6 +86,7 @@ $serial.RtsEnable = $false
 
 $fullLog = ""
 $ok = $false
+$prompts = @("loxdb-bench>", "microdb-bench>")
 $commands = @()
 foreach ($part in ($CommandScript -split ';')) {
     $cmd = $part.Trim()
@@ -103,10 +104,11 @@ try {
     $serial.WriteLine("")
 
     $buf = ""
-    $ready = Read-UntilPattern -Serial $serial -Pattern "loxdb-bench>" -TimeoutSec $OpenTimeoutSec -Buffer ([ref]$buf)
+    $matched = ""
+    $ready = Read-UntilAnyPattern -Serial $serial -Patterns $prompts -TimeoutSec $OpenTimeoutSec -Buffer ([ref]$buf) -MatchedPattern ([ref]$matched)
     $fullLog += $buf
     if (-not $ready) {
-        throw "Prompt 'loxdb-bench>' not detected on $Port within $OpenTimeoutSec s."
+        throw "Prompt 'loxdb-bench>' or 'microdb-bench>' not detected on $Port within $OpenTimeoutSec s."
     }
 
     foreach ($cmd in $commands) {
@@ -114,24 +116,27 @@ try {
         $buf = ""
         if ($cmd -eq "run" -or $cmd -eq "run_det" -or $cmd -eq "run_det_paced") {
             $matched = ""
-            $runDone = Read-UntilAnyPattern -Serial $serial -Patterns @("=== loxdb ESP32-S3 benchmark end ===", "loxdb-bench>") -TimeoutSec $RunTimeoutSec -Buffer ([ref]$buf) -MatchedPattern ([ref]$matched)
+            $runDone = Read-UntilAnyPattern -Serial $serial -Patterns (@("=== loxdb ESP32-S3 benchmark end ===", "=== microdb ESP32-S3 benchmark end ===") + $prompts) -TimeoutSec $RunTimeoutSec -Buffer ([ref]$buf) -MatchedPattern ([ref]$matched)
             $fullLog += $buf
             if (-not $runDone) {
                 throw "Benchmark command '$cmd' did not finish within $RunTimeoutSec s."
             }
-            if ($matched -eq "loxdb-bench>" -and $buf -notmatch [regex]::Escape("=== loxdb ESP32-S3 benchmark end ===")) {
+            if (($prompts -contains $matched) -and $buf -notmatch [regex]::Escape("=== loxdb ESP32-S3 benchmark end ===") -and $buf -notmatch [regex]::Escape("=== microdb ESP32-S3 benchmark end ===")) {
                 throw "Benchmark command '$cmd' returned to prompt without benchmark end marker."
             }
-            if ($buf -notmatch [regex]::Escape("loxdb-bench>")) {
+            $promptRegex = ($prompts | ForEach-Object { [regex]::Escape($_) }) -join "|"
+            if ($buf -notmatch $promptRegex) {
                 $buf = ""
-                $promptBack = Read-UntilPattern -Serial $serial -Pattern "loxdb-bench>" -TimeoutSec 20 -Buffer ([ref]$buf)
+                $promptBackMatched = ""
+                $promptBack = Read-UntilAnyPattern -Serial $serial -Patterns $prompts -TimeoutSec 20 -Buffer ([ref]$buf) -MatchedPattern ([ref]$promptBackMatched)
                 $fullLog += $buf
                 if (-not $promptBack) {
                     throw "Prompt not returned after '$cmd'."
                 }
             }
         } else {
-            $okBack = Read-UntilPattern -Serial $serial -Pattern "loxdb-bench>" -TimeoutSec 30 -Buffer ([ref]$buf)
+            $okBackMatched = ""
+            $okBack = Read-UntilAnyPattern -Serial $serial -Patterns $prompts -TimeoutSec 30 -Buffer ([ref]$buf) -MatchedPattern ([ref]$okBackMatched)
             $fullLog += $buf
             if (-not $okBack) {
                 throw "Command '$cmd' did not return to prompt."
