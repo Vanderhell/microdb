@@ -154,14 +154,16 @@ static uint32_t rng_next(void) {
   return s;
 }
 
-typedef struct {
+typedef struct bench_admission_profile_t bench_admission_profile_t;
+
+struct bench_admission_profile_t {
   const char *name;
   uint16_t ram_kb;
   uint8_t kv_pct;
   uint8_t ts_pct;
   uint8_t rel_pct;
   uint8_t wal_compact_threshold_pct;
-} bench_admission_profile_t;
+};
 
 static void startup_fail(const char *what, const char *hint) {
   Serial.printf("[FATAL] %s\n", what ? what : "startup failed");
@@ -809,7 +811,7 @@ static bool init_db() {
     }
 
     Serial.printf("[WARN] lox_init reject profile=%s rc=%d (%s)\n", p->name, (int)rc, lox_err_to_string(rc));
-    if (!(rc == LOX_ERR_NO_MEM || rc == LOX_ERR_CONFIG || rc == LOX_ERR_FULL || rc == LOX_ERR_STORAGE)) {
+    if (!(rc == LOX_ERR_NO_MEM || rc == LOX_ERR_FULL || rc == LOX_ERR_STORAGE)) {
       break;
     }
   }
