@@ -108,6 +108,10 @@ Optional automation (logs + doc update):
 ## Run notes
 
 - Latest merge-prep verdict: `docs/results/bench_verdict_20260511.md`
+- First SD stress run artifacts (2026-05-11):
+  - `docs/results/esp32_sd_stress_20260511_113124_4d1fd65_com19.md`
+  - `docs/results/esp32_sd_stress_20260511_113124_4d1fd65_com19.log`
+  - `docs/results/esp32_sd_stress_20260511_113124_4d1fd65_com19.csv`
 
 ## Related benches
 
