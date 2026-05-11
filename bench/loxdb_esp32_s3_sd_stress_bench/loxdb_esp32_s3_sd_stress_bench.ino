@@ -171,6 +171,42 @@ static void startup_fail(const char *what, const char *hint) {
   g_running = false;
 }
 
+static void init_cleanup() {
+  (void)lox_deinit(&g_db);
+  uint32_t i;
+  for (i = 0u; i < kRelTableCount; ++i) g_rel_tables[i] = NULL;
+}
+
+static bool register_ts_streams(lox_err_t *out_rc) {
+  uint32_t i;
+  for (i = 0u; i < kTsStreamCount; ++i) {
+    lox_err_t rc = lox_ts_register(&g_db, kTsStreams[i], LOX_TS_U32, 0u);
+    if (!(rc == LOX_OK || rc == LOX_ERR_EXISTS)) {
+      Serial.printf("[ERR] lox_ts_register(%s) rc=%d (%s)\n", kTsStreams[i], (int)rc, lox_err_to_string(rc));
+      if (out_rc) *out_rc = rc;
+      return false;
+    }
+    g_ts_seq[i] = 0u;
+  }
+  if (out_rc) *out_rc = LOX_OK;
+  return true;
+}
+
+static bool post_init_setup(lox_err_t *out_rc) {
+  lox_err_t rc = LOX_OK;
+  if (!register_ts_streams(&rc)) {
+    if (out_rc) *out_rc = rc;
+    return false;
+  }
+  if (!setup_rel()) {
+    Serial.println("[ERR] setup_rel failed (try smaller profile or resetdb)");
+    if (out_rc) *out_rc = LOX_ERR_NO_MEM;
+    return false;
+  }
+  if (out_rc) *out_rc = LOX_OK;
+  return true;
+}
+
 static bool preflight_profile(const bench_admission_profile_t *p, char *reason, size_t reason_cap) {
   if (!p) return false;
   if ((uint32_t)p->kv_pct + (uint32_t)p->ts_pct + (uint32_t)p->rel_pct != 100u) {
@@ -675,6 +711,7 @@ static bool init_db() {
   lox_err_t rc;
   memset(&cfg, 0, sizeof(cfg));
   memset(&g_storage, 0, sizeof(g_storage));
+  init_cleanup();
 
   g_storage.read = st_read;
   g_storage.write = st_write;
@@ -735,7 +772,7 @@ static bool init_db() {
     if (rc == LOX_ERR_CORRUPT || rc == LOX_ERR_EXISTS || rc == LOX_ERR_SCHEMA) {
       Serial.printf("[WARN] lox_init profile=%s rc=%d (%s), recreating storage file\n",
                     p->name, (int)rc, lox_err_to_string(rc));
-      (void)lox_deinit(&g_db);
+      init_cleanup();
       if (g_store) g_store.close();
       (void)SD_MMC.remove(kStoragePath);
       if (!open_storage_file()) {
@@ -746,16 +783,28 @@ static bool init_db() {
     }
 
     if (rc == LOX_OK) {
-      g_admitted_ram_kb = p->ram_kb;
-      g_admitted_kv_pct = p->kv_pct;
-      g_admitted_ts_pct = p->ts_pct;
-      g_admitted_rel_pct = p->rel_pct;
-      g_admitted_wal_th_pct = p->wal_compact_threshold_pct;
-      Serial.printf("[OK] admitted profile=%s ram_kb=%u split=%u/%u/%u wal_th=%u\n",
-                    p->name,
-                    (unsigned)p->ram_kb,
-                    (unsigned)p->kv_pct, (unsigned)p->ts_pct, (unsigned)p->rel_pct,
-                    (unsigned)p->wal_compact_threshold_pct);
+      lox_err_t post_rc = LOX_OK;
+      if (post_init_setup(&post_rc)) {
+        g_admitted_ram_kb = p->ram_kb;
+        g_admitted_kv_pct = p->kv_pct;
+        g_admitted_ts_pct = p->ts_pct;
+        g_admitted_rel_pct = p->rel_pct;
+        g_admitted_wal_th_pct = p->wal_compact_threshold_pct;
+        Serial.printf("[OK] admitted profile=%s ram_kb=%u split=%u/%u/%u wal_th=%u\n",
+                      p->name,
+                      (unsigned)p->ram_kb,
+                      (unsigned)p->kv_pct, (unsigned)p->ts_pct, (unsigned)p->rel_pct,
+                      (unsigned)p->wal_compact_threshold_pct);
+        break;
+      }
+
+      Serial.printf("[WARN] post-init reject profile=%s rc=%d (%s)\n",
+                    p->name, (int)post_rc, lox_err_to_string(post_rc));
+      init_cleanup();
+      if (post_rc == LOX_ERR_NO_MEM || post_rc == LOX_ERR_FULL || post_rc == LOX_ERR_STORAGE) {
+        continue;
+      }
+      rc = post_rc;
       break;
     }
 
@@ -772,21 +821,6 @@ static bool init_db() {
                   (unsigned long)g_storage.erase_size,
                   (unsigned long)g_storage.write_size);
     Serial.println("[HINT] try: ensure PSRAM enabled, use profile smoke/soak, or reduce storage image size");
-    return false;
-  }
-  {
-    uint32_t i;
-    for (i = 0u; i < kTsStreamCount; ++i) {
-      rc = lox_ts_register(&g_db, kTsStreams[i], LOX_TS_U32, 0u);
-      if (!(rc == LOX_OK || rc == LOX_ERR_EXISTS)) {
-        Serial.printf("[ERR] lox_ts_register(%s) rc=%d\n", kTsStreams[i], (int)rc);
-        return false;
-      }
-      g_ts_seq[i] = 0u;
-    }
-  }
-  if (!setup_rel()) {
-    Serial.println("[ERR] setup_rel failed");
     return false;
   }
   return true;
@@ -903,6 +937,7 @@ static void print_usage() {
   Serial.println("Commands:");
   Serial.println("  run | pause | resume");
   Serial.println("  profile smoke|soak|stress");
+  Serial.println("  reinit");
   Serial.println("  verify on|off");
   Serial.println("  mode all|kv|ts|rel");
   Serial.println("  clear kv|ts|rel|all");
@@ -916,6 +951,7 @@ static void set_profile_from_text(const String &arg) {
   else if (arg == "soak") apply_profile(PROFILE_SOAK);
   else if (arg == "stress") apply_profile(PROFILE_STRESS);
   else Serial.println("[ERR] profile must be smoke|soak|stress");
+  Serial.println("[INFO] profile affects admission; run 'reinit' (or resetdb/formatdb) to re-admit");
 }
 
 static void set_verify_from_text(const String &arg) {
@@ -1050,6 +1086,19 @@ static void format_db() {
   reset_db();
 }
 
+static void reinit_db() {
+  if (g_store) g_store.flush();
+  g_running = false;
+  g_db_ready = false;
+  init_cleanup();
+  if (!init_db()) {
+    Serial.println("[ERR] reinit failed; try profile smoke|soak|stress, then reinit, or resetdb");
+    return;
+  }
+  g_db_ready = true;
+  Serial.println("[OK] reinit complete");
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1200);
@@ -1116,9 +1165,10 @@ void loop() {
       else if (cmd.startsWith("swipe ")) cmd_swipe(cmd.substring(6));
       else if (cmd == "resetdb") reset_db();
       else if (cmd == "formatdb") format_db();
+      else if (cmd == "reinit") reinit_db();
       else if (!g_db_ready) {
         if (cmd.length() > 0) {
-          Serial.println("[ERR] database not ready yet; try: resetdb, formatdb, profile smoke|soak|stress");
+          Serial.println("[ERR] database not ready yet; try: profile smoke|soak|stress, reinit, resetdb, formatdb");
           print_usage();
         }
       } else if (cmd == "run" || cmd == "resume") g_running = true;
