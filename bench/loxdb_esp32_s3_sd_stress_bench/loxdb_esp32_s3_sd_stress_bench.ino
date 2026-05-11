@@ -94,6 +94,11 @@ static bool g_sd_ready = false;
 static bool g_db_ready = false;
 static bool g_running = true;
 static bool g_verify_enabled = true;
+static uint16_t g_admitted_ram_kb = 0u;
+static uint8_t g_admitted_kv_pct = 0u;
+static uint8_t g_admitted_ts_pct = 0u;
+static uint8_t g_admitted_rel_pct = 0u;
+static uint8_t g_admitted_wal_th_pct = 0u;
 
 static uint8_t *g_erase_buf = NULL;
 static uint32_t g_ops = 0u;
@@ -147,6 +152,50 @@ static uint32_t rng_next(void) {
   static uint32_t s = 0x1234ABCDu;
   s = s * 1664525u + 1013904223u;
   return s;
+}
+
+typedef struct {
+  const char *name;
+  uint16_t ram_kb;
+  uint8_t kv_pct;
+  uint8_t ts_pct;
+  uint8_t rel_pct;
+  uint8_t wal_compact_threshold_pct;
+} bench_admission_profile_t;
+
+static void startup_fail(const char *what, const char *hint) {
+  Serial.printf("[FATAL] %s\n", what ? what : "startup failed");
+  if (hint && hint[0] != '\0') Serial.printf("[HINT] %s\n", hint);
+  Serial.println("[HINT] use 'stats' (if running) or 'resetdb' after fixing the issue");
+  g_db_ready = false;
+  g_running = false;
+}
+
+static bool preflight_profile(const bench_admission_profile_t *p, char *reason, size_t reason_cap) {
+  if (!p) return false;
+  if ((uint32_t)p->kv_pct + (uint32_t)p->ts_pct + (uint32_t)p->rel_pct != 100u) {
+    if (reason && reason_cap) snprintf(reason, reason_cap, "split must sum to 100 (got %u/%u/%u)",
+                                       (unsigned)p->kv_pct, (unsigned)p->ts_pct, (unsigned)p->rel_pct);
+    return false;
+  }
+  if (p->ram_kb == 0u) {
+    if (reason && reason_cap) snprintf(reason, reason_cap, "ram_kb must be > 0");
+    return false;
+  }
+#if defined(ARDUINO_ARCH_ESP32)
+  size_t free_int = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  size_t free_total = free_int + free_psram;
+  size_t need = (size_t)p->ram_kb * 1024u;
+  size_t headroom = 128u * 1024u;
+  if (free_total < (need + headroom)) {
+    if (reason && reason_cap) snprintf(reason, reason_cap, "not enough heap/psram (need~%luKB + headroom, free=%luKB)",
+                                       (unsigned long)(need / 1024u), (unsigned long)(free_total / 1024u));
+    return false;
+  }
+#endif
+  if (reason && reason_cap) reason[0] = '\0';
+  return true;
 }
 
 static const char *mode_name(stress_mode_t m) {
@@ -637,37 +686,92 @@ static bool init_db() {
   g_storage.ctx = NULL;
 
   cfg.storage = &g_storage;
-  cfg.ram_kb = 8192u;
-  cfg.kv_pct = 45u;
-  cfg.ts_pct = 20u;
-  cfg.rel_pct = 35u;
-  cfg.wal_compact_auto = 1u;
-  cfg.wal_compact_threshold_pct = 75u;
-  cfg.wal_sync_mode = LOX_WAL_SYNC_FLUSH_ONLY;
 
-  rc = lox_init(&g_db, &cfg);
-  if (rc == LOX_ERR_CORRUPT || rc == LOX_ERR_EXISTS || rc == LOX_ERR_SCHEMA) {
-    Serial.printf("[WARN] lox_init rc=%d (%s), recreating storage file\n", (int)rc, lox_err_to_string(rc));
-    (void)lox_deinit(&g_db);
-    if (g_store) g_store.close();
-    (void)SD_MMC.remove(kStoragePath);
-    if (!open_storage_file()) {
-      Serial.println("[ERR] recreate storage file failed");
-      return false;
-    }
-    rc = lox_init(&g_db, &cfg);
+  /* Admission ladder: try bigger configs first, fallback deterministically. */
+  static const bench_admission_profile_t kLadderStress[] = {
+    {"stress-A", 8192u, 45u, 20u, 35u, 75u},
+    {"stress-B", 4096u, 40u, 30u, 30u, 70u},
+    {"stress-C", 2048u, 34u, 33u, 33u, 65u},
+  };
+  static const bench_admission_profile_t kLadderSoak[] = {
+    {"soak-A", 4096u, 40u, 30u, 30u, 70u},
+    {"soak-B", 2048u, 34u, 33u, 33u, 65u},
+  };
+  static const bench_admission_profile_t kLadderSmoke[] = {
+    {"smoke-A", 2048u, 34u, 33u, 33u, 65u},
+    {"smoke-B", 1024u, 34u, 33u, 33u, 60u},
+  };
+
+  const bench_admission_profile_t *ladder = NULL;
+  size_t ladder_n = 0u;
+  if (g_profile == PROFILE_STRESS) {
+    ladder = kLadderStress;
+    ladder_n = sizeof(kLadderStress) / sizeof(kLadderStress[0]);
+  } else if (g_profile == PROFILE_SMOKE) {
+    ladder = kLadderSmoke;
+    ladder_n = sizeof(kLadderSmoke) / sizeof(kLadderSmoke[0]);
+  } else {
+    ladder = kLadderSoak;
+    ladder_n = sizeof(kLadderSoak) / sizeof(kLadderSoak[0]);
   }
+
+  char reason[128];
+  for (size_t i = 0u; i < ladder_n; ++i) {
+    const bench_admission_profile_t *p = &ladder[i];
+    if (!preflight_profile(p, reason, sizeof(reason))) {
+      Serial.printf("[WARN] preflight reject profile=%s: %s\n", p->name, reason);
+      continue;
+    }
+
+    cfg.ram_kb = p->ram_kb;
+    cfg.kv_pct = p->kv_pct;
+    cfg.ts_pct = p->ts_pct;
+    cfg.rel_pct = p->rel_pct;
+    cfg.wal_compact_auto = 1u;
+    cfg.wal_compact_threshold_pct = p->wal_compact_threshold_pct;
+    cfg.wal_sync_mode = LOX_WAL_SYNC_FLUSH_ONLY;
+
+    rc = lox_init(&g_db, &cfg);
+    if (rc == LOX_ERR_CORRUPT || rc == LOX_ERR_EXISTS || rc == LOX_ERR_SCHEMA) {
+      Serial.printf("[WARN] lox_init profile=%s rc=%d (%s), recreating storage file\n",
+                    p->name, (int)rc, lox_err_to_string(rc));
+      (void)lox_deinit(&g_db);
+      if (g_store) g_store.close();
+      (void)SD_MMC.remove(kStoragePath);
+      if (!open_storage_file()) {
+        Serial.println("[ERR] recreate storage file failed");
+        return false;
+      }
+      rc = lox_init(&g_db, &cfg);
+    }
+
+    if (rc == LOX_OK) {
+      g_admitted_ram_kb = p->ram_kb;
+      g_admitted_kv_pct = p->kv_pct;
+      g_admitted_ts_pct = p->ts_pct;
+      g_admitted_rel_pct = p->rel_pct;
+      g_admitted_wal_th_pct = p->wal_compact_threshold_pct;
+      Serial.printf("[OK] admitted profile=%s ram_kb=%u split=%u/%u/%u wal_th=%u\n",
+                    p->name,
+                    (unsigned)p->ram_kb,
+                    (unsigned)p->kv_pct, (unsigned)p->ts_pct, (unsigned)p->rel_pct,
+                    (unsigned)p->wal_compact_threshold_pct);
+      break;
+    }
+
+    Serial.printf("[WARN] lox_init reject profile=%s rc=%d (%s)\n", p->name, (int)rc, lox_err_to_string(rc));
+    if (!(rc == LOX_ERR_NO_MEM || rc == LOX_ERR_CONFIG || rc == LOX_ERR_FULL || rc == LOX_ERR_STORAGE)) {
+      break;
+    }
+  }
+
   if (rc != LOX_OK) {
-    Serial.printf("[ERR] lox_init rc=%d cap=%lu erase=%lu write=%lu ram_kb=%u split=%u/%u/%u wal_th=%u\n",
-                  (int)rc,
+    Serial.printf("[ERR] lox_init failed rc=%d (%s) cap=%lu erase=%lu write=%lu\n",
+                  (int)rc, lox_err_to_string(rc),
                   (unsigned long)g_storage.capacity,
                   (unsigned long)g_storage.erase_size,
-                  (unsigned long)g_storage.write_size,
-                  (unsigned)cfg.ram_kb,
-                  (unsigned)cfg.kv_pct,
-                  (unsigned)cfg.ts_pct,
-                  (unsigned)cfg.rel_pct,
-                  (unsigned)cfg.wal_compact_threshold_pct);
+                  (unsigned long)g_storage.write_size);
+    Serial.println("[HINT] try: ensure PSRAM enabled, use profile smoke/soak, or reduce storage image size");
     return false;
   }
   {
@@ -958,31 +1062,42 @@ void setup() {
   g_erase_buf = (uint8_t *)malloc(kEraseSize);
 #endif
   if (!g_erase_buf) {
-    Serial.println("[FATAL] no erase buffer");
+    startup_fail("no erase buffer", "enable PSRAM or reduce erase_size buffer");
     return;
   }
   memset(g_erase_buf, 0xFF, kEraseSize);
 
   if (!open_storage_file()) {
-    Serial.println("[FATAL] SD storage file open failed");
+    startup_fail("SD storage file open failed", "check SD wiring, card inserted, and that card is readable (FAT) via SD_MMC");
     return;
   }
   if (kFreshStartOnBoot) {
     if (!recreate_storage_file()) {
-      Serial.println("[FATAL] fresh-start recreate failed");
+      startup_fail("fresh-start recreate failed", "try another SD card, check write-protect, or lower storage image size");
       return;
     }
     Serial.println("[OK] fresh-start storage image created");
   }
+
+  /* Apply default bench mix before admission (affects ladder choice via g_profile). */
+  apply_profile(PROFILE_SOAK);
+
   if (!init_db()) {
-    Serial.println("[FATAL] lox_init failed");
+    startup_fail("lox_init failed", "try 'profile smoke' (smaller RAM), ensure PSRAM is enabled, or run 'formatdb'");
     return;
   }
   g_db_ready = true;
-  apply_profile(PROFILE_SOAK);
   Serial.println("[OK] loxdb SD stress bench ready");
   Serial.printf("SD pins CLK=%d CMD=%d D0=%d D3=%d\n", SDMMC_PIN_CLK, SDMMC_PIN_CMD, SDMMC_PIN_D0, SDMMC_PIN_D3);
   Serial.printf("LCD pins SCLK=%d MOSI=%d CS=%d DC=%d RST=%d\n", LCD_PIN_SCLK, LCD_PIN_MOSI, LCD_PIN_CS, LCD_PIN_DC, LCD_PIN_RST);
+  if (g_admitted_ram_kb) {
+    Serial.printf("ADMISSION ram_kb=%u split=%u/%u/%u wal_th=%u\n",
+                  (unsigned)g_admitted_ram_kb,
+                  (unsigned)g_admitted_kv_pct,
+                  (unsigned)g_admitted_ts_pct,
+                  (unsigned)g_admitted_rel_pct,
+                  (unsigned)g_admitted_wal_th_pct);
+  }
   print_usage();
 }
 
@@ -994,14 +1109,21 @@ void loop() {
     char c = (char)Serial.read();
     if (c == '\r') continue;
     if (c == '\n') {
-      if (cmd == "run" || cmd == "resume") g_running = true;
-      else if (cmd == "pause") g_running = false;
-      else if (cmd.startsWith("profile ")) set_profile_from_text(cmd.substring(8));
+      if (cmd.startsWith("profile ")) set_profile_from_text(cmd.substring(8));
       else if (cmd.startsWith("verify ")) set_verify_from_text(cmd.substring(7));
       else if (cmd.startsWith("mode ")) set_mode_from_text(cmd.substring(5));
-      else if (cmd.startsWith("clear ")) clear_engine(cmd.substring(6));
       else if (cmd == "slist") cmd_slist();
       else if (cmd.startsWith("swipe ")) cmd_swipe(cmd.substring(6));
+      else if (cmd == "resetdb") reset_db();
+      else if (cmd == "formatdb") format_db();
+      else if (!g_db_ready) {
+        if (cmd.length() > 0) {
+          Serial.println("[ERR] database not ready yet; try: resetdb, formatdb, profile smoke|soak|stress");
+          print_usage();
+        }
+      } else if (cmd == "run" || cmd == "resume") g_running = true;
+      else if (cmd == "pause") g_running = false;
+      else if (cmd.startsWith("clear ")) clear_engine(cmd.substring(6));
       else if (cmd == "compact") {
         uint32_t t0 = millis();
         (void)lox_compact(&g_db);
@@ -1009,8 +1131,6 @@ void loop() {
         g_last_compact_ms = millis() - t0;
       }
       else if (cmd == "stats") show_stats();
-      else if (cmd == "resetdb") reset_db();
-      else if (cmd == "formatdb") format_db();
       else if (cmd.length() > 0) print_usage();
       cmd = "";
     } else {
