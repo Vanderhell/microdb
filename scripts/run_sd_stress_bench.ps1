@@ -77,6 +77,8 @@ $serial.RtsEnable = $false
 
 $fullLog = ""
 $csvRows = New-Object System.Collections.Generic.List[object]
+$admissionLine = $null
+$admittedProfileLine = $null
 $sdReady = "[OK] loxdb SD stress bench ready"
 $fatal = "[FATAL]"
 $wrongBenchPrompts = @("loxdb-bench>", "microdb-bench>")
@@ -108,6 +110,10 @@ try {
     Write-Cmd -Serial $serial -Cmd "pause"
     Start-Sleep -Milliseconds 100
 
+    # Admission is controlled by profile + (re)init. Select profile first.
+    Write-Cmd -Serial $serial -Cmd ("profile {0}" -f $Profile)
+    Start-Sleep -Milliseconds 80
+
     if ($FormatDb) {
         Write-Host "Formatting DB image..."
         Write-Cmd -Serial $serial -Cmd "formatdb"
@@ -115,9 +121,12 @@ try {
     } elseif ($ResetDb) {
         Write-Cmd -Serial $serial -Cmd "resetdb"
         Start-Sleep -Milliseconds 200
+    } else {
+        # Re-admit without wiping image (still deterministic for admission config).
+        Write-Cmd -Serial $serial -Cmd "reinit"
+        Start-Sleep -Milliseconds 200
     }
 
-    Write-Cmd -Serial $serial -Cmd ("profile {0}" -f $Profile)
     Write-Cmd -Serial $serial -Cmd ("mode {0}" -f $Mode)
     Write-Cmd -Serial $serial -Cmd ("verify {0}" -f $Verify)
     Write-Cmd -Serial $serial -Cmd "stats"
@@ -144,6 +153,8 @@ try {
                         ops     = [int]$Matches[6]
                     })
                 }
+                if ($line -match "^ADMISSION\s+") { $admissionLine = $line.Trim() }
+                if ($line -match "^\[OK\]\s+admitted\s+profile=") { $admittedProfileLine = $line.Trim() }
                 if ($line -match "^\[FATAL\]") {
                     throw "Device reported [FATAL] during run."
                 }
@@ -179,7 +190,16 @@ finally {
     $md += ("- mode: {0}" -f $Mode)
     $md += ("- verify: {0}" -f $Verify)
     $md += ("- duration: {0}s" -f $DurationSec)
+    $md += ("- resetdb: {0}" -f ($(if ($ResetDb) { "yes" } else { "no" })))
+    $md += ("- formatdb: {0}" -f ($(if ($FormatDb) { "yes" } else { "no" })))
     $md += ""
+    if ($admissionLine -or $admittedProfileLine) {
+        $md += "Admission:"
+        $md += ""
+        if ($admittedProfileLine) { $md += ("- {0}" -f $admittedProfileLine) }
+        if ($admissionLine) { $md += ("- {0}" -f $admissionLine) }
+        $md += ""
+    }
     $md += "Artifacts:"
     $md += ""
     $md += ("- raw log: {0}" -f ([IO.Path]::GetFileName($rawLogPath)))
