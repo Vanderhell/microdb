@@ -18,6 +18,7 @@ See `bench/loxdb_esp32_s3_sd_stress_bench/README.md`.
 2. Run the logger:
 
    - `./scripts/run_sd_stress_bench.ps1 -Port COM19 -DurationSec 600 -Profile soak -Mode all -Verify on -ResetDb`
+   - If you omit `-ResetDb` / `-FormatDb`, the logger will run `reinit` to re-admit the selected profile without wiping the SD image.
 
 If you see a message like "Detected terminal bench firmware (loxdb-bench>)", it means the board is running the other bench sketch (HEAD/BASE terminal bench). Re-flash the SD stress sketch and retry.
 
