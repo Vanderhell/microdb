@@ -71,13 +71,21 @@ ctest --preset ci-debug-linux
 
 ## Verified hardware
 
+loxdb is written in portable C99 and works on any MCU with byte-write 
+flash storage — including ESP32 family, STM32, RP2040, nRF52, and similar 
+Cortex-M class hardware. Only platforms verified end-to-end on real 
+hardware are listed below; ports to other targets are technically 
+supported but not yet bench-validated.
+
+### Verified on hardware
+
 | Platform | Status | Benchmarks |
 |---|---|---|
-| ESP32-S3 N16R8 (16MB NOR flash, 8MB PSRAM) | Verified (KV/TS/REL + WAL recovery + power-loss scenarios) | `docs/BENCHMARKS.md` |
+| ESP32-S3 N16R8 (16MB NOR flash, 8MB PSRAM) | Verified — KV/TS/REL engines, WAL recovery, power-loss scenarios | [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) |
 
-Notes:
-- Verified using the existing ESP32-S3 bench runners under `bench/`.
-- Published benchmark results live in `docs/BENCHMARKS.md` (template-only until filled with real measurements).
+Verified using the ESP32-S3 bench runners under [`bench/`](bench/). 
+Published benchmark results live in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) 
+(template until filled with real measurements).
 
 ## Project status & roadmap
 
