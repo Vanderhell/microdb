@@ -40,20 +40,38 @@ int main(void) {
     lox_storage_t storage;
     lox_cfg_t cfg = {0};
 
-    lox_port_ram_init(&storage, 64u * 1024u);
+    if (lox_port_ram_init(&storage, 64u * 1024u) != LOX_OK) return 1;
+
     cfg.storage = &storage;
     cfg.ram_kb = 32u;
-    if (lox_init(&db, &cfg) != LOX_OK) return 1;
+
+    if (lox_init(&db, &cfg) != LOX_OK) {
+        lox_port_ram_deinit(&storage);
+        return 1;
+    }
 
     uint8_t v = 7u, out = 0u;
-    lox_kv_put(&db, "k", &v, 1u);
-    lox_kv_get(&db, "k", &out, 1u);
+    size_t out_len = 0u;
+
+    if (lox_kv_put(&db, "k", &v, sizeof(v)) != LOX_OK) {
+        lox_deinit(&db);
+        lox_port_ram_deinit(&storage);
+        return 1;
+    }
+
+    if (lox_kv_get(&db, "k", &out, sizeof(out), &out_len) != LOX_OK) {
+        lox_deinit(&db);
+        lox_port_ram_deinit(&storage);
+        return 1;
+    }
 
     lox_deinit(&db);
     lox_port_ram_deinit(&storage);
     return 0;
 }
 ```
+
+
 
 ## Build & test (desktop)
 
